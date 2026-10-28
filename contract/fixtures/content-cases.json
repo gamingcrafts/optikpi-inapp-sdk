@@ -1,0 +1,160 @@
+{
+  "about": "How an SDK reads PopupContent that is incomplete or wrong. Each case builds its input from `content` when that key is present (any JSON value, even null); otherwise from `base`, with the top-level keys in `set` replaced and the keys in `remove` deleted. `expect: null` means the SDK skips the pop-up. Otherwise the parsed content, written back as JSON with colours as upper-case #RRGGBB or #RRGGBBAA, must match `expect`: objects match on the keys listed, arrays match in length and element by element, and a null value means the key is absent or null.",
+  "base": {
+    "version": 1,
+    "layout": "modal",
+    "size": "md",
+    "title": "Hello",
+    "body": "Body",
+    "buttons": [
+      { "label": "Go", "style": "primary", "action": { "type": "deeplink", "value": "app://cashier" } }
+    ],
+    "close": { "show": true, "position": "topRight", "tapOutsideToClose": true },
+    "theme": {
+      "background": "#101828",
+      "text": "#FFFFFF",
+      "primary": "#F79009",
+      "overlayOpacity": 0.7,
+      "radius": 16
+    }
+  },
+  "cases": [
+    {
+      "name": "a full modal",
+      "expect": {
+        "version": 1,
+        "layout": "modal",
+        "size": "md",
+        "buttons": [{ "label": "Go", "style": "primary", "action": { "type": "deeplink", "value": "app://cashier" } }],
+        "theme": { "background": "#101828", "text": "#FFFFFF", "primary": "#F79009" },
+        "position": null,
+        "autoDismissSec": null
+      }
+    },
+    { "name": "not an object", "content": "modal", "expect": null },
+    { "name": "null", "content": null, "expect": null },
+    { "name": "unknown layout", "set": { "layout": "carousel" }, "expect": null },
+    { "name": "missing layout", "remove": ["layout"], "expect": null },
+    { "name": "version 2", "set": { "version": 2 }, "expect": null },
+    { "name": "missing version is 1", "remove": ["version"], "expect": { "version": 1 } },
+    { "name": "unknown fields are ignored", "set": { "sparkle": true, "theme2": {} }, "expect": { "layout": "modal" } },
+    { "name": "missing size takes the layout's first size", "remove": ["size"], "expect": { "size": "sm" } },
+    {
+      "name": "a size the layout does not allow takes its first size",
+      "set": { "layout": "fullscreen", "size": "sm" },
+      "expect": { "size": "lg" }
+    },
+    { "name": "missing buttons", "remove": ["buttons"], "expect": { "buttons": [] } },
+    { "name": "buttons not a list", "set": { "buttons": "x" }, "expect": { "buttons": [] } },
+    {
+      "name": "three buttons keep the first two",
+      "set": {
+        "buttons": [
+          { "label": "B0", "style": "primary", "action": { "type": "dismiss" } },
+          { "label": "B1", "style": "primary", "action": { "type": "dismiss" } },
+          { "label": "B2", "style": "primary", "action": { "type": "dismiss" } }
+        ]
+      },
+      "expect": { "buttons": [{ "label": "B0" }, { "label": "B1" }] }
+    },
+    {
+      "name": "a banner keeps one button",
+      "set": {
+        "layout": "banner",
+        "buttons": [
+          { "label": "B0", "style": "primary", "action": { "type": "dismiss" } },
+          { "label": "B1", "style": "primary", "action": { "type": "dismiss" } }
+        ]
+      },
+      "expect": { "buttons": [{ "label": "B0" }] }
+    },
+    {
+      "name": "imageOnly drops buttons and text",
+      "set": { "layout": "imageOnly" },
+      "expect": { "buttons": [], "title": null, "body": null }
+    },
+    {
+      "name": "an unknown action type drops that button",
+      "set": {
+        "buttons": [
+          { "label": "X", "style": "primary", "action": { "type": "teleport" } },
+          { "label": "Y", "style": "primary", "action": { "type": "dismiss" } }
+        ]
+      },
+      "expect": { "buttons": [{ "label": "Y" }] }
+    },
+    {
+      "name": "a deeplink without a value acts as dismiss",
+      "set": { "buttons": [{ "label": "X", "style": "primary", "action": { "type": "deeplink", "value": " " } }] },
+      "expect": { "buttons": [{ "action": { "type": "dismiss" } }] }
+    },
+    {
+      "name": "an unknown button style is primary",
+      "set": { "buttons": [{ "label": "X", "style": "ghost", "action": { "type": "dismiss" } }] },
+      "expect": { "buttons": [{ "style": "primary" }] }
+    },
+    {
+      "name": "bad theme values fall back one by one to the builder's defaults",
+      "set": {
+        "theme": { "background": "red", "text": "#12", "primary": "#GGGGGG", "overlayOpacity": 3, "radius": -4 }
+      },
+      "expect": {
+        "theme": { "background": "#FFFFFF", "text": "#101828", "primary": "#7F56D9", "overlayOpacity": 1, "radius": 16 }
+      }
+    },
+    {
+      "name": "short and alpha hex colours",
+      "set": { "theme": { "background": "#fff", "text": "#10182880", "primary": "#7F56D9" } },
+      "expect": { "theme": { "background": "#FFFFFF", "text": "#10182880", "primary": "#7F56D9" } }
+    },
+    {
+      "name": "missing theme and close get defaults",
+      "remove": ["theme", "close"],
+      "expect": {
+        "theme": { "background": "#FFFFFF", "text": "#101828", "primary": "#7F56D9", "overlayOpacity": 0.5, "radius": 16 },
+        "close": { "show": true, "position": "topRight", "tapOutsideToClose": true }
+      }
+    },
+    {
+      "name": "a banner without a position is top, and without autoDismissSec stays up (the builder's Never)",
+      "set": { "layout": "banner" },
+      "expect": { "position": "top", "autoDismissSec": null }
+    },
+    {
+      "name": "a toast with a banner position takes topRight",
+      "set": { "layout": "toast", "size": "sm", "position": "bottom" },
+      "expect": { "position": "topRight" }
+    },
+    {
+      "name": "a fractional autoDismissSec rounds up",
+      "set": { "layout": "banner", "autoDismissSec": 4.2 },
+      "expect": { "autoDismissSec": 5 }
+    },
+    {
+      "name": "autoDismissSec 0 means stay up",
+      "set": { "layout": "toast", "autoDismissSec": 0 },
+      "expect": { "autoDismissSec": null }
+    },
+    { "name": "autoDismissSec on a modal is ignored", "set": { "autoDismissSec": 5 }, "expect": { "autoDismissSec": null } },
+    { "name": "an image without a url is no image", "set": { "image": { "alt": "x" } }, "expect": { "image": null } },
+    {
+      "name": "an image tapAction is kept",
+      "set": {
+        "image": { "url": "https://cdn.example/a.png", "tapAction": { "type": "url", "value": "https://example.com" } }
+      },
+      "expect": {
+        "image": { "url": "https://cdn.example/a.png", "tapAction": { "type": "url", "value": "https://example.com" } }
+      }
+    },
+    {
+      "name": "wrong types everywhere still parse",
+      "set": { "title": 5, "body": ["x"], "close": "yes", "mergeTags": "x" },
+      "expect": { "title": null, "body": null, "close": { "show": true }, "mergeTags": null }
+    },
+    {
+      "name": "delivery is carried",
+      "set": { "delivery": { "availableFor": { "value": 3, "unit": "days" }, "timeZone": "UTC" } },
+      "expect": { "delivery": { "availableFor": { "value": 3, "unit": "days" }, "timeZone": "UTC" } }
+    }
+  ]
+}

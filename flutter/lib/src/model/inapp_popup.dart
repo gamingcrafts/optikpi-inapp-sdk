@@ -1,6 +1,6 @@
 import 'popup_content.dart';
 
-/// One waiting pop-up as the pull API returns it (see API.md).
+/// One waiting pop-up as the pull API returns it (see the repo's API.md).
 class InAppPopup {
   const InAppPopup({
     required this.id,
@@ -20,9 +20,16 @@ class InAppPopup {
 
   bool isExpiredAt(DateTime now) => expiresAt != null && !now.isBefore(expiresAt!);
 
-  /// Null when the entry can't be shown or tracked: no id, no trackingId, unusable content.
+  /// The only message kind this version handles. An entry with no `kind` (or null) is a pop-up.
+  static const String kind = 'popup';
+
+  /// Null when the entry can't be shown or tracked: another kind of message, no id, no
+  /// trackingId, unusable content.
   static InAppPopup? tryParse(Object? json) {
     if (json is! Map) return null;
+    // Room for future message types: an SDK that doesn't know a kind skips it.
+    final entryKind = json['kind'];
+    if (entryKind != null && entryKind != kind) return null;
     final id = json['id'];
     final trackingId = json['trackingId'];
     if (id is! String || id.isEmpty || trackingId is! String || trackingId.isEmpty) return null;

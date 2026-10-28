@@ -10,7 +10,7 @@ import 'popup_view.dart';
 class PopupHost extends StatelessWidget {
   const PopupHost({super.key, required this.controller, required this.child});
 
-  final OptikpiPopupController controller;
+  final OptikpiInAppController controller;
   final Widget child;
 
   @override
@@ -45,7 +45,7 @@ class PopupHost extends StatelessWidget {
 class _ActivePopup extends StatefulWidget {
   const _ActivePopup({super.key, required this.controller, required this.active});
 
-  final OptikpiPopupController controller;
+  final OptikpiInAppController controller;
   final ActivePopup active;
 
   @override

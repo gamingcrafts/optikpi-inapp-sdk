@@ -38,7 +38,7 @@ class PopupImageCache {
     try {
       final response = await _client.get(uri).timeout(timeout);
       if (response.statusCode != 200 || response.bodyBytes.isEmpty) {
-        popupLog('image HTTP ${response.statusCode}: $url');
+        inAppLog('image HTTP ${response.statusCode}: $url');
         return null;
       }
       _bytes[url] = response.bodyBytes;
@@ -47,7 +47,7 @@ class PopupImageCache {
       }
       return response.bodyBytes;
     } catch (error) {
-      popupLog('image failed: $url ($error)');
+      inAppLog('image failed: $url ($error)');
       return null;
     }
   }

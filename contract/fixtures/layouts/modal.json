@@ -1,0 +1,40 @@
+{
+  "version": 1,
+  "layout": "modal",
+  "size": "md",
+  "image": {
+    "url": "gradient:#0B6E4F,#101828",
+    "alt": "Playing cards"
+  },
+  "title": "Welcome, {{first_name}}!",
+  "body": "Make your first deposit today and get a 100% bonus up to €200 plus 50 free spins.",
+  "buttons": [
+    {
+      "label": "Deposit now",
+      "style": "primary",
+      "action": {
+        "type": "deeplink",
+        "value": "app://cashier"
+      }
+    },
+    {
+      "label": "Maybe later",
+      "style": "secondary",
+      "action": {
+        "type": "dismiss"
+      }
+    }
+  ],
+  "close": {
+    "show": true,
+    "position": "topRight",
+    "tapOutsideToClose": true
+  },
+  "theme": {
+    "background": "#101828",
+    "text": "#FFFFFF",
+    "primary": "#F79009",
+    "overlayOpacity": 0.7,
+    "radius": 16
+  }
+}

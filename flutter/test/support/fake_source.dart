@@ -1,8 +1,8 @@
 import 'dart:async';
 import 'dart:typed_data';
 
-import 'package:optikpi_popup/optikpi_popup.dart';
-import 'package:optikpi_popup/src/render/popup_image_cache.dart';
+import 'package:optikpi_inapp/optikpi_inapp.dart';
+import 'package:optikpi_inapp/src/render/popup_image_cache.dart';
 
 /// A PopupSource that records what it is asked and answers what the test sets.
 class FakeSource extends PopupSource {

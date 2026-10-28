@@ -6,7 +6,8 @@ import 'dart:ui' show Color;
    - an unknown layout (or a `version` other than 1) makes the whole pop-up unusable, so
      `PopupContent.tryParse` returns null and the caller skips it;
    - anything else that is missing or invalid falls back to the value the web builder would
-     have produced (`applyLayout` in popup.types.ts), so a slightly wrong payload still renders. */
+     have produced (`applyLayout` in popup.types.ts), so a slightly wrong payload still renders.
+     The exception is a missing `autoDismissSec`, which means stay up (the builder's "Never"). */
 
 enum PopupLayout { modal, fullscreen, bottomSheet, banner, toast, imageOnly }
 
@@ -392,12 +393,10 @@ class PopupContent {
       buttons: buttons,
       close: PopupClose.parse(map['close']),
       theme: PopupTheme.parse(map['theme']),
-      // Missing gets the builder's default of 8 s (`applyLayout`); 0 or less means stay up.
+      // Missing, 0 or less means stay up: the builder saves its "Never" choice as a missing value.
       autoDismissSec:
           !spec.autoDismiss
               ? null
-              : autoDismiss == null
-              ? 8
               : (autoDismiss is num && autoDismiss.isFinite && autoDismiss > 0
                   ? autoDismiss.ceil()
                   : null),

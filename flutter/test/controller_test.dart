@@ -2,9 +2,9 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:optikpi_popup/optikpi_popup.dart';
-import 'package:optikpi_popup/src/render/popup_image_cache.dart';
-import 'package:optikpi_popup/src/route_observer.dart';
+import 'package:optikpi_inapp/optikpi_inapp.dart';
+import 'package:optikpi_inapp/src/render/popup_image_cache.dart';
+import 'package:optikpi_inapp/src/route_observer.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'support/fake_source.dart';
@@ -26,7 +26,7 @@ class Harness {
   DateTime now = DateTime.utc(2026, 10, 10, 12);
   final List<String> deepLinks = [];
   final List<Uri> launched = [];
-  late final OptikpiPopupController controller = OptikpiPopupController(
+  late final OptikpiInAppController controller = OptikpiInAppController(
     images: images,
     clock: () => now,
     launchUrl: (uri) async {

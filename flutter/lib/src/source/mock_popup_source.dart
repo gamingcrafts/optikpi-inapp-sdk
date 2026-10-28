@@ -51,14 +51,14 @@ class MockPopupSource extends PopupSource {
       ],
       'nextCheckAfterSec': 300,
     };
-    popupLog('mock fetch for ${context.playerId}: ${mockPopupTemplates.length} pop-ups');
+    inAppLog('mock fetch for ${context.playerId}: ${mockPopupTemplates.length} pop-ups');
     return PopupFetchResult.fromJson(json);
   }
 
   @override
   Future<void> sendEvents(PopupRequestContext context, List<PopupEvent> events) async {
     for (final event in events) {
-      popupLog(
+      inAppLog(
         'mock event ${event.type.name} ${event.trackingId}'
         '${event.buttonIndex != null ? ' button ${event.buttonIndex}' : ''}',
       );

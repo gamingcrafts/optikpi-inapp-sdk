@@ -1,0 +1,40 @@
+{
+  "version": 1,
+  "layout": "fullscreen",
+  "size": "lg",
+  "image": {
+    "url": "gradient:#F79009,#7F56D9",
+    "alt": ""
+  },
+  "title": "Big win, {{first_name}}! 🎉",
+  "body": "You just won €1,250 on Gates of Olympus. Keep the streak going with 10 bonus spins on us.",
+  "buttons": [
+    {
+      "label": "Collect spins",
+      "style": "primary",
+      "action": {
+        "type": "deeplink",
+        "value": "app://bonuses"
+      }
+    },
+    {
+      "label": "Close",
+      "style": "secondary",
+      "action": {
+        "type": "dismiss"
+      }
+    }
+  ],
+  "close": {
+    "show": true,
+    "position": "topRight",
+    "tapOutsideToClose": true
+  },
+  "theme": {
+    "background": "#101828",
+    "text": "#FFFFFF",
+    "primary": "#F79009",
+    "overlayOpacity": 0.7,
+    "radius": 16
+  }
+}

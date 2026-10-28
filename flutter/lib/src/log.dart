@@ -1,8 +1,8 @@
 import 'package:flutter/foundation.dart';
 
-/// Set through `OptikpiPopup.debug`. The package logs nothing else.
-bool popupDebugLogging = false;
+/// Set through `OptikpiInApp.debug`. The package logs nothing else.
+bool inAppDebugLogging = false;
 
-void popupLog(String message) {
-  if (popupDebugLogging) debugPrint('[OptikpiPopup] $message');
+void inAppLog(String message) {
+  if (inAppDebugLogging) debugPrint('[OptikpiInApp] $message');
 }

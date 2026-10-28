@@ -1,0 +1,153 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/gamingcrafts/optikpi-inapp-sdk/blob/main/contract/popup-content.schema.json",
+  "title": "PopupContent",
+  "description": "The content of one in-app pop-up, version 1. Written from PopupContent in app_next `app/shared/popup/popup.types.ts` (dev), with the per-layout rules of POPUP_LAYOUTS. This is what the server should send. SDKs read more loosely (see fixtures/content-cases.json), and they ignore fields they don't know.",
+  "type": "object",
+  "required": ["version", "layout", "size", "buttons", "close", "theme"],
+  "properties": {
+    "version": { "const": 1 },
+    "layout": { "enum": ["modal", "fullscreen", "bottomSheet", "banner", "toast", "imageOnly"] },
+    "size": { "enum": ["sm", "md", "lg", "iab_300x250", "iab_320x50"] },
+    "position": {
+      "description": "banner and toast only.",
+      "enum": ["top", "bottom", "center", "topRight", "bottomRight"]
+    },
+    "image": {
+      "type": "object",
+      "required": ["url"],
+      "properties": {
+        "url": {
+          "type": "string",
+          "description": "An image URL. `gradient:#RRGGBB,#RRGGBB` is a placeholder the builder's starter templates use; SDKs draw it as a gradient."
+        },
+        "alt": { "type": "string" },
+        "tapAction": { "$ref": "#/$defs/action" }
+      }
+    },
+    "title": { "type": "string", "description": "Merge tags are filled by the server before delivery." },
+    "body": { "type": "string", "description": "Merge tags are filled by the server before delivery." },
+    "buttons": {
+      "type": "array",
+      "maxItems": 2,
+      "items": {
+        "type": "object",
+        "required": ["label", "style", "action"],
+        "properties": {
+          "label": { "type": "string" },
+          "style": { "enum": ["primary", "secondary"] },
+          "action": { "$ref": "#/$defs/action" }
+        }
+      }
+    },
+    "close": {
+      "type": "object",
+      "required": ["show", "position", "tapOutsideToClose"],
+      "properties": {
+        "show": { "type": "boolean" },
+        "position": { "enum": ["topRight", "topLeft"] },
+        "tapOutsideToClose": { "type": "boolean" }
+      }
+    },
+    "theme": {
+      "type": "object",
+      "required": ["background", "text", "primary", "overlayOpacity", "radius"],
+      "properties": {
+        "background": { "$ref": "#/$defs/color" },
+        "text": { "$ref": "#/$defs/color" },
+        "primary": { "$ref": "#/$defs/color" },
+        "overlayOpacity": { "type": "number", "minimum": 0, "maximum": 1 },
+        "radius": { "type": "number", "minimum": 0 }
+      }
+    },
+    "autoDismissSec": { "type": "number", "minimum": 0, "description": "banner and toast only. Seconds until the pop-up hides. 0 or absent means stay up: the builder saves its \"Never\" choice as absent." },
+    "mergeTags": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Library only: the merge fields used in title and body. SDKs ignore it."
+    },
+    "delivery": {
+      "description": "Campaign only: how long the pop-up stays available. The server applies it; SDKs ignore it.",
+      "type": "object",
+      "required": ["availableFor"],
+      "properties": {
+        "availableFor": {
+          "type": "object",
+          "required": ["value", "unit"],
+          "properties": {
+            "value": { "type": "number" },
+            "unit": { "enum": ["hours", "days"] }
+          }
+        },
+        "customEndsAt": { "type": "string" },
+        "timeZone": { "type": "string" }
+      }
+    }
+  },
+  "allOf": [
+    {
+      "if": { "properties": { "layout": { "const": "modal" } } },
+      "then": {
+        "properties": { "size": { "enum": ["sm", "md", "lg", "iab_300x250"] } },
+        "not": { "anyOf": [{ "required": ["position"] }, { "required": ["autoDismissSec"] }] }
+      }
+    },
+    {
+      "if": { "properties": { "layout": { "const": "fullscreen" } } },
+      "then": {
+        "properties": { "size": { "const": "lg" } },
+        "not": { "anyOf": [{ "required": ["position"] }, { "required": ["autoDismissSec"] }] }
+      }
+    },
+    {
+      "if": { "properties": { "layout": { "const": "bottomSheet" } } },
+      "then": {
+        "properties": { "size": { "enum": ["sm", "md", "lg"] } },
+        "not": { "anyOf": [{ "required": ["position"] }, { "required": ["autoDismissSec"] }] }
+      }
+    },
+    {
+      "if": { "properties": { "layout": { "const": "banner" } } },
+      "then": {
+        "properties": {
+          "size": { "enum": ["md", "iab_320x50"] },
+          "position": { "enum": ["top", "bottom"] },
+          "buttons": { "maxItems": 1 }
+        }
+      }
+    },
+    {
+      "if": { "properties": { "layout": { "const": "toast" } } },
+      "then": {
+        "properties": {
+          "size": { "enum": ["sm", "md"] },
+          "position": { "enum": ["topRight", "bottomRight"] },
+          "buttons": { "maxItems": 1 }
+        }
+      }
+    },
+    {
+      "if": { "properties": { "layout": { "const": "imageOnly" } } },
+      "then": {
+        "description": "The builder can leave a title and body on content switched to imageOnly. SDKs don't draw them.",
+        "properties": { "size": { "enum": ["md", "lg", "iab_300x250"] }, "buttons": { "maxItems": 0 } },
+        "not": { "anyOf": [{ "required": ["position"] }, { "required": ["autoDismissSec"] }] }
+      }
+    }
+  ],
+  "$defs": {
+    "action": {
+      "type": "object",
+      "required": ["type"],
+      "properties": {
+        "type": { "enum": ["deeplink", "url", "dismiss"] },
+        "value": { "type": "string", "description": "Required in practice for deeplink and url; SDKs treat a blank one as dismiss." }
+      }
+    },
+    "color": {
+      "type": "string",
+      "pattern": "^#([0-9A-Fa-f]{3}|[0-9A-Fa-f]{6}|[0-9A-Fa-f]{8})$",
+      "description": "#RGB, #RRGGBB or #RRGGBBAA."
+    }
+  }
+}

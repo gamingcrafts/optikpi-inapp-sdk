@@ -19,11 +19,11 @@ import 'popup_image_cache.dart';
 
 /// Widget keys, for tests and for apps that drive the pop-up in their own tests.
 abstract final class PopupKeys {
-  static const card = ValueKey('optikpi_popup.card');
-  static const overlay = ValueKey('optikpi_popup.overlay');
-  static const close = ValueKey('optikpi_popup.close');
-  static const image = ValueKey('optikpi_popup.image');
-  static ValueKey<String> button(int index) => ValueKey('optikpi_popup.button.$index');
+  static const card = ValueKey('optikpi_inapp.card');
+  static const overlay = ValueKey('optikpi_inapp.overlay');
+  static const close = ValueKey('optikpi_inapp.close');
+  static const image = ValueKey('optikpi_inapp.image');
+  static ValueKey<String> button(int index) => ValueKey('optikpi_inapp.button.$index');
 }
 
 /// The breakpoint between the reference's `mobile` and `desktop` surfaces.

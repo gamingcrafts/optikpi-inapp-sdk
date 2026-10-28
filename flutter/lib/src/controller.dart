@@ -29,7 +29,7 @@ class ActivePopup {
   final PopupRequestContext? context;
   final PopupDeepLinkHandler? onDeepLink;
 
-  /// Shown from `OptikpiPopup.showTest`: no events, not remembered as shown.
+  /// Shown from `OptikpiInApp.showTest`: no events, not remembered as shown.
   final bool isTest;
 
   PopupContent get content => popup.content;
@@ -49,8 +49,8 @@ class _Session {
   bool fetching = false;
 }
 
-class OptikpiPopupController with WidgetsBindingObserver {
-  OptikpiPopupController({
+class OptikpiInAppController with WidgetsBindingObserver {
+  OptikpiInAppController({
     PopupEventQueue? events,
     ShownStore? shown,
     PopupImageCache? images,
@@ -113,13 +113,13 @@ class OptikpiPopupController with WidgetsBindingObserver {
     }
     await shown.load();
     if (!identical(session, _session)) return;
-    popupLog('init workspace ${context.workspaceId} player ${context.playerId}');
+    inAppLog('init workspace ${context.workspaceId} player ${context.playerId}');
     unawaited(_flush(session));
     _fetchMoment();
   }
 
   Future<void> logout() async {
-    popupLog('logout');
+    inAppLog('logout');
     _endSession(flush: true);
     if (_observing) {
       WidgetsBinding.instance.removeObserver(this);
@@ -139,7 +139,7 @@ class OptikpiPopupController with WidgetsBindingObserver {
       unawaited(
         events
             .flush(session.source, session.context)
-            .catchError((Object error) => popupLog('flush failed: $error')),
+            .catchError((Object error) => inAppLog('flush failed: $error')),
       );
     }
   }
@@ -165,7 +165,7 @@ class OptikpiPopupController with WidgetsBindingObserver {
       if (!identical(session, _session)) return;
       session.throttle.recordResponse(_clock(), result.nextCheckAfterSec);
       session.waiting = result.popups;
-      popupLog(
+      inAppLog(
         'fetched ${result.popups.length} pop-up(s), next check in '
         '${session.throttle.interval.inSeconds} s',
       );
@@ -173,7 +173,7 @@ class OptikpiPopupController with WidgetsBindingObserver {
       _showMoment();
     } catch (error) {
       // Silent by contract; the next fetch moment tries again.
-      popupLog('fetch failed: $error');
+      inAppLog('fetch failed: $error');
     } finally {
       session.fetching = false;
     }
@@ -194,7 +194,7 @@ class OptikpiPopupController with WidgetsBindingObserver {
     _route = route;
     _visit++;
     _shownThisVisit = false;
-    popupLog('route $route');
+    inAppLog('route $route');
     // A banner or toast leaves the player free to move on; it must not follow them onto a
     // blocked screen. Not a dismiss: the player didn't close it.
     final active = current.value;
@@ -203,7 +203,7 @@ class OptikpiPopupController with WidgetsBindingObserver {
         !active.isTest &&
         session != null &&
         isRouteBlocked(route, session.blockedRoutes)) {
-      popupLog('hide ${active.popup.id}: $route is blocked');
+      inAppLog('hide ${active.popup.id}: $route is blocked');
       current.value = null;
     }
     _showMoment();
@@ -242,7 +242,7 @@ class OptikpiPopupController with WidgetsBindingObserver {
       if (image != null && !image.isGradient) await images.load(image.url);
     } catch (error) {
       // Silent by contract (storage failed); the next show moment tries again.
-      popupLog('pick failed: $error');
+      inAppLog('pick failed: $error');
       next = null;
     } finally {
       _picking = false;
@@ -260,7 +260,7 @@ class OptikpiPopupController with WidgetsBindingObserver {
     final picked = next;
     _shownThisVisit = true;
     session.waiting = session.waiting.where((p) => p.id != picked.id).toList(growable: false);
-    popupLog('show ${picked.id} (${picked.content.layout.name}) on $_route');
+    inAppLog('show ${picked.id} (${picked.content.layout.name}) on $_route');
     current.value = ActivePopup._(picked, session.context, session.onDeepLink, isTest: false);
   }
 
@@ -282,13 +282,13 @@ class OptikpiPopupController with WidgetsBindingObserver {
   void didDraw(ActivePopup active) {
     if (!identical(current.value, active)) return;
     if (active.isTest) {
-      popupLog('test pop-up drawn (${active.content.layout.name})');
+      inAppLog('test pop-up drawn (${active.content.layout.name})');
       return;
     }
     unawaited(
       shown
           .markShown(active.popup.id)
-          .catchError((Object error) => popupLog('could not remember ${active.popup.id}: $error')),
+          .catchError((Object error) => inAppLog('could not remember ${active.popup.id}: $error')),
     );
     _track(active, PopupEventType.impression);
   }
@@ -329,10 +329,10 @@ class OptikpiPopupController with WidgetsBindingObserver {
         if (uri == null) break;
         _launchUrl(uri).then(
           (opened) {
-            if (!opened) popupLog('could not open $uri');
+            if (!opened) inAppLog('could not open $uri');
           },
           onError: (Object error) {
-            popupLog('could not open $uri: $error');
+            inAppLog('could not open $uri: $error');
           },
         );
     }
@@ -342,7 +342,7 @@ class OptikpiPopupController with WidgetsBindingObserver {
 
   void _track(ActivePopup active, PopupEventType type, {int? buttonIndex}) {
     if (active.isTest) {
-      popupLog('test ${type.name}${buttonIndex != null ? ' button $buttonIndex' : ''}');
+      inAppLog('test ${type.name}${buttonIndex != null ? ' button $buttonIndex' : ''}');
       return;
     }
     final context = active.context!;
@@ -359,7 +359,7 @@ class OptikpiPopupController with WidgetsBindingObserver {
             if (added) _scheduleFlush();
           },
           onError: (Object error) {
-            popupLog('could not queue ${type.name}: $error');
+            inAppLog('could not queue ${type.name}: $error');
           },
         );
   }
@@ -378,7 +378,7 @@ class OptikpiPopupController with WidgetsBindingObserver {
     try {
       await events.flush(session.source, session.context);
     } catch (error) {
-      popupLog('flush failed: $error');
+      inAppLog('flush failed: $error');
     }
   }
 

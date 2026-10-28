@@ -16,7 +16,7 @@ class PopupRouteObserver extends NavigatorObserver {
   }
 
   final void Function(String route) onRoute;
-  final OptikpiPopupController? controller;
+  final OptikpiInAppController? controller;
 
   ModalRoute<dynamic>? _top;
   LocalHistoryEntry? _entry;

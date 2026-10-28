@@ -16,8 +16,8 @@ class PopupEventQueue {
   PopupEventQueue({Future<SharedPreferences> Function()? prefs, this.batchSize = 50})
     : _prefs = prefs ?? SharedPreferences.getInstance;
 
-  static const String queueKey = 'optikpi_popup.events';
-  static const String trackedKey = 'optikpi_popup.tracked';
+  static const String queueKey = 'optikpi_inapp.events';
+  static const String trackedKey = 'optikpi_inapp.tracked';
 
   /// Oldest events drop off first when the device has been offline for a very long time.
   static const int maxQueued = 500;
@@ -54,7 +54,7 @@ class PopupEventQueue {
       ),
     ];
     await Future.wait(writes);
-    popupLog('queued ${event.type.name} ${event.trackingId}');
+    inAppLog('queued ${event.type.name} ${event.trackingId}');
     return true;
   }
 
@@ -110,11 +110,11 @@ class PopupEventQueue {
           await source.sendEvents(playerContext, batch.map((q) => q.event).toList());
         } on PopupHttpException catch (error) {
           // This player's batch was refused; other players' events may still go.
-          popupLog('event send for $playerId refused, will retry: $error');
+          inAppLog('event send for $playerId refused, will retry: $error');
           break;
         } catch (error) {
           // Offline or timed out: nothing else will get through now.
-          popupLog('event send failed, will retry: $error');
+          inAppLog('event send failed, will retry: $error');
           return;
         }
         final sent = batch.map((q) => q.raw).toSet();

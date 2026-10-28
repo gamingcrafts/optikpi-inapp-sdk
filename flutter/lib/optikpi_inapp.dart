@@ -12,29 +12,29 @@ import 'src/source/mock_popup_source.dart';
 import 'src/source/mock_templates.dart';
 import 'src/source/popup_source.dart';
 
-export 'src/controller.dart' show ActivePopup, OptikpiPopupController, PopupDeepLinkHandler;
+export 'src/controller.dart' show ActivePopup, OptikpiInAppController, PopupDeepLinkHandler;
 export 'src/events/popup_event.dart' show PopupEvent, PopupEventType;
 export 'src/model/inapp_popup.dart' show InAppPopup, PopupFetchResult;
 export 'src/model/popup_content.dart';
 export 'src/render/popup_host.dart' show PopupHost;
 export 'src/render/popup_view.dart' show PopupKeys, PopupView;
 export 'src/source/popup_source.dart'
-    show PopupHttpException, PopupRequestContext, PopupSource, defaultPopupBaseUrl;
-export 'src/version.dart' show optikpiPopupVersion;
+    show PopupHttpException, PopupRequestContext, PopupSource, defaultInAppBaseUrl;
+export 'src/version.dart' show optikpiInAppVersion;
 
-abstract final class OptikpiPopup {
-  static final OptikpiPopupController _controller = OptikpiPopupController();
+abstract final class OptikpiInApp {
+  static final OptikpiInAppController _controller = OptikpiInAppController();
   static final PopupRouteObserver _routeObserver = PopupRouteObserver(
     _controller.didChangeRoute,
     controller: _controller,
   );
 
-  /// Logs with the `[OptikpiPopup]` prefix. Off by default; the package logs nothing else.
-  static bool get debug => popupDebugLogging;
-  static set debug(bool value) => popupDebugLogging = value;
+  /// Logs with the `[OptikpiInApp]` prefix. Off by default; the package logs nothing else.
+  static bool get debug => inAppDebugLogging;
+  static set debug(bool value) => inAppDebugLogging = value;
 
   /// The controller behind the static API, for tests and advanced use.
-  static OptikpiPopupController get controller => _controller;
+  static OptikpiInAppController get controller => _controller;
 
   /// Pass to `MaterialApp.builder` (or call from your own builder): draws pop-ups over every
   /// screen.
@@ -61,7 +61,7 @@ abstract final class OptikpiPopup {
     required String playerId,
     required String apiKey,
     String? deviceKey,
-    String baseUrl = defaultPopupBaseUrl,
+    String baseUrl = defaultInAppBaseUrl,
     PopupSource? source,
     PopupDeepLinkHandler? onDeepLink,
     List<String> blockedRoutes = const [],

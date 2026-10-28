@@ -4,8 +4,8 @@ import 'dart:convert';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
-import 'package:optikpi_popup/optikpi_popup.dart';
-import 'package:optikpi_popup/src/events/event_queue.dart';
+import 'package:optikpi_inapp/optikpi_inapp.dart';
+import 'package:optikpi_inapp/src/events/event_queue.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'support/fake_source.dart';
@@ -143,7 +143,7 @@ void main() {
     expect(captured.url.toString(), 'https://inapp.test/ingest/popup');
     expect(captured.headers['authorization'], 'Bearer key');
     expect(captured.headers['x-device-key'], 'dev');
-    expect(captured.headers['x-sdk-version'], 'optikpi_popup-flutter/$optikpiPopupVersion');
+    expect(captured.headers['x-sdk-version'], 'optikpi_inapp-flutter/$optikpiInAppVersion');
     expect(captured.headers.keys, isNot(contains('x-api-key')));
     expect(captured.headers.keys, isNot(contains('x-workspace-id')));
     expect(jsonDecode(captured.body), {

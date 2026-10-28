@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:optikpi_popup/optikpi_popup.dart';
+import 'package:optikpi_inapp/optikpi_inapp.dart';
 
 class Taps {
   final List<String> log = [];
@@ -43,7 +43,7 @@ Future<Taps> pumpView(
 }
 
 void main() {
-  final samples = {for (final c in OptikpiPopup.sampleContents()) c.layout: c};
+  final samples = {for (final c in OptikpiInApp.sampleContents()) c.layout: c};
 
   test('one sample per layout', () {
     expect(samples.keys.toSet(), PopupLayout.values.toSet());

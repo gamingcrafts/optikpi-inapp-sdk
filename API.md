@@ -1,21 +1,25 @@
 # In-app pop-up pull API (v1): the contract
 
-This is what `optikpi_popup` 0.1.0 calls. The backend ticket (OK-1amxvnb3b9e) builds the fetch
-endpoint and the `popup` ingest provider. Until then the package runs against `PopupSource.mock()`,
-and the default base URL is a placeholder that never resolves (`https://inapp.optikpi.invalid`).
+One contract for every OptiKPI in-app SDK in this repo. The Flutter SDK (`optikpi_inapp` 0.1.0)
+calls it today. The backend ticket (OK-1amxvnb3b9e) builds the fetch endpoint and the `popup`
+ingest provider. Until then the SDK runs against `PopupSource.mock()`, and its default base URL is a
+placeholder that never resolves (`https://inapp.optikpi.invalid`).
 
 Design rules come from the in-app pop-ups spec ("Delivery: pull"). The server stores each pop-up a
 campaign or workflow sends, and the app fetches it. The pop-up content is the `PopupContent`
-contract (`app/shared/popup/popup.types.ts` in app_next), unchanged.
+contract (`app/shared/popup/popup.types.ts` in app_next), unchanged. Its JSON Schema is
+[`contract/popup-content.schema.json`](contract/popup-content.schema.json), and
+[`contract/fixtures/`](contract/fixtures/) holds sample content for each layout and the cases every
+SDK must read the same way.
 
 ## Common
 
 | | |
 |---|---|
-| Base URL | per environment, `https://{dev\|qa\|app}.optikpi.com/apigw`, passed to `OptikpiPopup.init(baseUrl: …)` |
+| Base URL | per environment, `https://{dev\|qa\|app}.optikpi.com/apigw`, passed to the SDK's init (Flutter: `OptikpiInApp.init(baseUrl: …)`) |
 | `Authorization` | `Bearer {apiKey}`, the workspace's in-app integration key (required). The key carries the workspace, so no workspace header is sent. |
 | `x-device-key` | FCM token in the app, OptiKPI device ID on the web (optional in v1, see below) |
-| `x-sdk-version` | e.g. `optikpi_popup-flutter/0.1.0` (sent always, for support and metrics) |
+| `x-sdk-version` | `{package}-{platform}/{version}`, e.g. `optikpi_inapp-flutter/0.1.0` (sent always, for support and metrics) |
 
 Both calls send the same headers. The server resolves the workspace from the key and, when
 `x-device-key` is sent, checks that the device belongs to the player. A failed check returns
@@ -44,6 +48,7 @@ Returns the player's waiting pop-ups.
 
 | Field | Type | Rule |
 |---|---|---|
+| `popups[].kind` | string, optional | Reserved for message types after pop-ups. Absent (or null) means `popup`, the only kind in v1. An SDK skips an entry whose kind it doesn't know, so new kinds can be added without breaking older apps. |
 | `popups[].id` | string, required | Unique per stored pop-up. The app remembers it to show each pop-up once per device. A re-send of the same campaign replaces the waiting pop-up and gets a **new** `id`. |
 | `popups[].trackingId` | string, required | Goes back on every event. Joins to `campaign_report`. |
 | `popups[].campaignId` | string, optional | Campaign or workflow id, for logs only. |
@@ -58,9 +63,10 @@ Server-side rules:
 - Return an empty list, not `404`, when nothing is waiting.
 
 What the app does with the response:
-- An entry with a missing `id` or `trackingId`, an unknown `layout`, or `content.version` other than `1` is skipped. The others still show.
+- An entry with an unknown `kind`, a missing `id` or `trackingId`, an unknown `layout`, or `content.version` other than `1` is skipped. The others still show.
 - Unknown fields are ignored, so fields can be added without a new version.
 - Anything else that is missing or invalid (a size the layout doesn't allow, a bad colour, a 3rd button) falls back to the web builder's defaults.
+- [`contract/fixtures/content-cases.json`](contract/fixtures/content-cases.json) and [`fetch-response-cases.json`](contract/fixtures/fetch-response-cases.json) spell these rules out case by case. Every SDK's tests run them.
 
 ## `POST {baseUrl}/ingest/popup`
 
@@ -97,6 +103,7 @@ Mapping to campaign statuses (ticket 1c): `impression` → Delivered/Open, `clic
 - **Events go to `POST {baseUrl}/ingest/popup`**, the shared ingest webhook, instead of `POST /v1/inapp/events`. The body is unchanged. (Puru, 2026-10-28.)
 - **Auth is `Authorization: Bearer {apiKey}`** on both calls, instead of `x-api-key` plus `x-workspace-id`. (Puru, 2026-10-28.)
 - **Added `x-sdk-version`** for support and metrics.
+- **Added the optional `popups[].kind`**, so later message types can share the endpoint. Older SDKs skip kinds they don't know. (Puru, 2026-10-28.)
 - **`buttonIndex` is 0-based** and absent for an image tap, so an image click and a button click can be told apart.
 - **Spelled out at-least-once delivery.** Server-side dedupe on `(trackingId, type)` is required.
 - **Spelled out "re-send replaces, with a new id".** A replaced pop-up the player already saw must show again, so it can't keep the old `id`.

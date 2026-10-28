@@ -1,0 +1,33 @@
+{
+  "version": 1,
+  "layout": "bottomSheet",
+  "size": "md",
+  "image": {
+    "url": "gradient:#7F56D9,#F04438",
+    "alt": ""
+  },
+  "title": "Your bonus is still waiting",
+  "body": "{{first_name}}, your 50 free spins unlock with a €10 deposit. Offer ends tonight.",
+  "buttons": [
+    {
+      "label": "Claim free spins",
+      "style": "primary",
+      "action": {
+        "type": "deeplink",
+        "value": "app://cashier"
+      }
+    }
+  ],
+  "close": {
+    "show": true,
+    "position": "topRight",
+    "tapOutsideToClose": true
+  },
+  "theme": {
+    "background": "#FFFFFF",
+    "text": "#101828",
+    "primary": "#7F56D9",
+    "overlayOpacity": 0.5,
+    "radius": 16
+  }
+}

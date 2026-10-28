@@ -6,7 +6,7 @@ class ShownStore {
   ShownStore({Future<SharedPreferences> Function()? prefs})
     : _prefs = prefs ?? SharedPreferences.getInstance;
 
-  static const String key = 'optikpi_popup.shown';
+  static const String key = 'optikpi_inapp.shown';
 
   /// Oldest ids drop off first. Server-side expiry (30 days at most) makes old ids irrelevant.
   static const int maxIds = 500;

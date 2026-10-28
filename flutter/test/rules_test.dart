@@ -1,7 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:optikpi_popup/optikpi_popup.dart';
-import 'package:optikpi_popup/src/logic/fetch_throttle.dart';
-import 'package:optikpi_popup/src/logic/show_rules.dart';
+import 'package:optikpi_inapp/optikpi_inapp.dart';
+import 'package:optikpi_inapp/src/logic/fetch_throttle.dart';
+import 'package:optikpi_inapp/src/logic/show_rules.dart';
 
 InAppPopup popup(String id, {required DateTime createdAt, DateTime? expiresAt}) => InAppPopup(
   id: id,

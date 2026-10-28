@@ -6,7 +6,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:optikpi_popup/optikpi_popup.dart';
+import 'package:optikpi_inapp/optikpi_inapp.dart';
 
 /* Screenshots of the 6 layouts on a 390 × 844 phone, for the PR and the README.
    `flutter test --tags golden --update-goldens` writes them to test/goldens/<layout>.png.
@@ -35,7 +35,7 @@ Future<bool> _loadRoboto() async {
 }
 
 void main() {
-  final samples = OptikpiPopup.sampleContents(playerData: {'first_name': 'Carlos'});
+  final samples = OptikpiInApp.sampleContents(playerData: {'first_name': 'Carlos'});
 
   for (final content in samples) {
     testWidgets('golden: ${content.layout.name}', (tester) async {

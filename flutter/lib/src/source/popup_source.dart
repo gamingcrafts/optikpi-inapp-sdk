@@ -10,7 +10,7 @@ import 'mock_popup_source.dart';
 
 /// Placeholder until the pull API ships. `.invalid` never resolves, so nothing is sent anywhere.
 /// The real one is per environment: `https://{dev|qa|app}.optikpi.com/apigw`.
-const String defaultPopupBaseUrl = 'https://inapp.optikpi.invalid';
+const String defaultInAppBaseUrl = 'https://inapp.optikpi.invalid';
 
 /// Who is asking: one logged-in player in one workspace.
 class PopupRequestContext {
@@ -35,7 +35,7 @@ class PopupRequestContext {
 abstract class PopupSource {
   const PopupSource();
 
-  /// The pull API described in API.md.
+  /// The pull API described in the repo's API.md.
   factory PopupSource.http({http.Client? client}) = HttpPopupSource;
 
   /// The bundled templates (all 6 layouts). Events are logged, never sent.
@@ -67,7 +67,7 @@ class HttpPopupSource extends PopupSource {
     'authorization': 'Bearer ${context.apiKey}',
     if (context.deviceKey != null && context.deviceKey!.isNotEmpty)
       'x-device-key': context.deviceKey!,
-    'x-sdk-version': 'optikpi_popup-flutter/$optikpiPopupVersion',
+    'x-sdk-version': 'optikpi_inapp-flutter/$optikpiInAppVersion',
     'accept': 'application/json',
   };
 
@@ -106,6 +106,6 @@ class HttpPopupSource extends PopupSource {
     if (response.statusCode < 200 || response.statusCode >= 300) {
       throw PopupHttpException(response.statusCode, path);
     }
-    popupLog('sent ${events.length} event(s)');
+    inAppLog('sent ${events.length} event(s)');
   }
 }

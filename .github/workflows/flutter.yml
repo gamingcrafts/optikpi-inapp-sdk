@@ -1,0 +1,37 @@
+name: flutter
+
+on:
+  push:
+    branches: [main]
+    paths: ['flutter/**', 'contract/**', '.github/workflows/flutter.yml']
+  pull_request:
+    paths: ['flutter/**', 'contract/**', '.github/workflows/flutter.yml']
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: flutter
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          # The version the package and its goldens were built with. Bump it together with the goldens.
+          flutter-version: 3.47.8
+          cache: true
+      - run: flutter pub get
+      - run: dart format --output=none --set-exit-if-changed lib test
+      - run: flutter analyze
+      # Includes the goldens: `flutter test` sets FLUTTER_ROOT, where they find the SDK's Roboto.
+      - run: flutter test
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: golden-failures
+          path: flutter/test/goldens/failures/
+          if-no-files-found: ignore

@@ -1,0 +1,57 @@
+{
+  "about": "How an SDK reads a GET /v1/inapp/popups response (see API.md). For each case, `expectIds` lists the ids of the entries the SDK keeps, in response order, and `expectNextCheckAfterSec` is the value it reads (null when missing or unusable). `{ \"layout\": \"modal\" }` is the smallest content an SDK accepts (every other field has a default), though the schema asks the server for more.",
+  "cases": [
+    {
+      "name": "entries without an id, a trackingId or valid content are skipped; the rest are kept",
+      "response": {
+        "popups": [
+          { "id": "a", "trackingId": "t", "createdAt": "2026-10-01T00:00:00Z", "content": { "layout": "modal" } },
+          { "trackingId": "t", "content": { "layout": "modal" } },
+          { "id": "b", "content": { "layout": "modal" } },
+          { "id": "", "trackingId": "t", "content": { "layout": "modal" } },
+          { "id": "c", "trackingId": "t", "content": { "layout": "nope" } },
+          { "id": "d", "trackingId": "t" },
+          "garbage"
+        ],
+        "nextCheckAfterSec": 120
+      },
+      "expectIds": ["a"],
+      "expectNextCheckAfterSec": 120
+    },
+    {
+      "name": "kind is absent, null or popup for a pop-up; other kinds are skipped",
+      "response": {
+        "popups": [
+          { "id": "no-kind", "trackingId": "t", "content": { "layout": "modal" } },
+          { "id": "null-kind", "kind": null, "trackingId": "t", "content": { "layout": "modal" } },
+          { "id": "popup", "kind": "popup", "trackingId": "t", "content": { "layout": "modal" } },
+          { "id": "inbox", "kind": "inbox", "trackingId": "t", "content": { "layout": "modal" } },
+          { "id": "not-a-string", "kind": 5, "trackingId": "t", "content": { "layout": "modal" } }
+        ]
+      },
+      "expectIds": ["no-kind", "null-kind", "popup"],
+      "expectNextCheckAfterSec": null
+    },
+    {
+      "name": "a missing createdAt keeps the entry",
+      "response": { "popups": [{ "id": "a", "trackingId": "t", "content": { "layout": "toast" } }] },
+      "expectIds": ["a"],
+      "expectNextCheckAfterSec": null
+    },
+    { "name": "an empty object", "response": {}, "expectIds": [], "expectNextCheckAfterSec": null },
+    { "name": "a null body", "response": null, "expectIds": [], "expectNextCheckAfterSec": null },
+    { "name": "popups not a list", "response": { "popups": "x" }, "expectIds": [], "expectNextCheckAfterSec": null },
+    {
+      "name": "a non-numeric nextCheckAfterSec is ignored",
+      "response": { "popups": [], "nextCheckAfterSec": "300" },
+      "expectIds": [],
+      "expectNextCheckAfterSec": null
+    },
+    {
+      "name": "a fractional nextCheckAfterSec rounds",
+      "response": { "popups": [], "nextCheckAfterSec": 59.6 },
+      "expectIds": [],
+      "expectNextCheckAfterSec": 60
+    }
+  ]
+}
