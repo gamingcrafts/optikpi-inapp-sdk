@@ -12,7 +12,8 @@ import 'src/source/mock_popup_source.dart';
 import 'src/source/mock_templates.dart';
 import 'src/source/popup_source.dart';
 
-export 'src/controller.dart' show ActivePopup, OptikpiInAppController, PopupDeepLinkHandler;
+export 'src/controller.dart'
+    show ActivePopup, OptikpiInAppController, PopupCustomActionHandler, PopupDeepLinkHandler;
 export 'src/events/popup_event.dart' show PopupEvent, PopupEventType;
 export 'src/model/inapp_popup.dart' show InAppPopup, PopupFetchResult;
 export 'src/model/popup_content.dart';
@@ -56,6 +57,8 @@ abstract final class OptikpiInApp {
   /// `PopupSource.mock()` serves the bundled templates instead, and needs no real token.
   /// [blockedRoutes] never show a pop-up (a path blocks itself and everything under it).
   /// [onDeepLink] receives a button's `deeplink` value; without it the pop-up just closes.
+  /// [onCustomAction] receives the key/value pairs of a `custom` action, after the pop-up has
+  /// closed and the click is tracked; without it the pop-up just closes.
   ///
   /// The player and workspace are read from the token. If it can't be read, the package logs
   /// that and fetches nothing until [setPlayerToken].
@@ -64,6 +67,7 @@ abstract final class OptikpiInApp {
     required String playerToken,
     required String baseUrl,
     PopupDeepLinkHandler? onDeepLink,
+    PopupCustomActionHandler? onCustomAction,
     List<String> blockedRoutes = const [],
     PopupSource? source,
   }) {
@@ -73,6 +77,7 @@ abstract final class OptikpiInApp {
       baseUrl: baseUrl,
       source: source ?? PopupSource.http(),
       onDeepLink: onDeepLink,
+      onCustomAction: onCustomAction,
       blockedRoutes: blockedRoutes,
     );
   }

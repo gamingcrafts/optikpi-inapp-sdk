@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.3.0
+
+A pop-up button or image can carry key/value pairs for the app's own click handler, the same pairs a push notification carries.
+- New action type `custom`, with `customData: [{ "key": …, "value": … }]`. New `PopupActionType.custom` and `PopupAction.customData`.
+- New optional `init` callback `onCustomAction(Map<String, String> data)`. Tap order stays close, track click, perform. Without the callback, the pop-up just closes.
+- A `custom` action with no usable pairs acts as dismiss, like a `deeplink` with a blank `value`.
+- **Upgrade before sending `custom` actions:** SDK 0.2.0 and earlier don't know this type. They don't draw a button that has it. A pop-up left with no buttons has only its close button and tap outside, and if the pop-up turns both off, the player can't dismiss it (on a blocking layout, Android back still closes it). An `imageOnly` tap closes the pop-up and tracks the click, but the app receives nothing.
+
 ## 0.2.0
 
 The player now comes from a token signed by the operator's server, not from the app.

@@ -21,10 +21,10 @@ dependencies:
     git:
       url: https://github.com/gamingcrafts/optikpi-inapp-sdk.git
       path: flutter
-      ref: flutter-v0.2.0
+      ref: flutter-v0.3.0
 ```
 
-If your build can't reach GitHub, unzip `optikpi_inapp-0.2.0.zip` into your repo instead (for
+If your build can't reach GitHub, unzip `optikpi_inapp-0.3.0.zip` into your repo instead (for
 example under `packages/optikpi_inapp/`) and use `path: packages/optikpi_inapp`.
 
 **2. Run `flutter pub get`.**
@@ -60,6 +60,7 @@ await OptikpiInApp.init(
   playerToken: loginResponse.optikpiPlayerToken,
   baseUrl: 'https://app.optikpi.com/apigw',
   onDeepLink: (link) => router.go(link),               // optional
+  onCustomAction: (data) => handleMessageClick(data),  // optional
   blockedRoutes: ['/dashboard/games/play', '/dashboard/deposit'],
 );
 ```
@@ -76,11 +77,34 @@ OptikpiInApp.setPlayerToken(newToken);
 await OptikpiInApp.logout();   // stops fetching, drops this player's waiting pop-ups
 ```
 
+## Custom actions
+
+A `custom` action hands your app key/value pairs instead of a link. If your push notifications carry a click payload in their FCM `data`, these are the same keys, so one handler can serve both:
+
+```dart
+// Your app's existing push click handler.
+void handleMessageClick(Map<String, dynamic> data) {
+  if (data['type'] == 'offers') openOffers(data['supplemental'] as String);
+}
+
+FirebaseMessaging.onMessageOpenedApp.listen((message) => handleMessageClick(message.data));
+
+await OptikpiInApp.init(
+  apiKey: '...',
+  playerToken: loginResponse.optikpiPlayerToken,
+  baseUrl: 'https://app.optikpi.com/apigw',
+  onCustomAction: handleMessageClick,
+);
+```
+
+The keys are whatever the pop-up was built with; the package doesn't read them. Merge tags in the values are already filled. The pop-up closes first and the click is tracked, then the callback runs. With no pairs, the action closes the pop-up, like a `deeplink` with a blank value.
+
 ## Options
 
 | `init` argument | Default | |
 |---|---|---|
 | `onDeepLink` | none | Receives a `deeplink` button's value (e.g. `app://cashier`). Map it to a route yourself. Without it, the pop-up just closes. |
+| `onCustomAction` | none | Receives a `custom` button's or image's key/value pairs as a `Map<String, String>`, after the pop-up has closed and the click is tracked. See [Custom actions](#custom-actions). Without it, the pop-up just closes. |
 | `blockedRoutes` | `[]` | Screens that never show a pop-up: game play, cashier, KYC. A path blocks itself and everything under it, so `/dashboard/deposit` blocks `/dashboard/deposit/card` but not `/dashboard/deposit-log`. Write paths, not go_router route names (see below). |
 | `source` | the pull API | `PopupSource.mock()` serves the bundled sample pop-ups instead. It sends nothing, logs events when `debug` is on, and needs no real token. |
 
@@ -100,6 +124,7 @@ Other members:
 - **Acts on taps:**
   - `url` opens in the external browser or app.
   - `deeplink` calls `onDeepLink`.
+  - `custom` calls `onCustomAction` with its key/value pairs.
   - `dismiss` closes.
   - Android back closes a blocking pop-up and stays on the page (this needs the route observer).
     It works like a drawer: the pop-up adds an entry to the page's route. So on a page with

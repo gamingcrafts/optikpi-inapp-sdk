@@ -15,7 +15,7 @@ enum PopupSize { sm, md, lg, iab_300x250, iab_320x50 }
 
 enum PopupPosition { top, bottom, center, topRight, bottomRight }
 
-enum PopupActionType { deeplink, url, dismiss }
+enum PopupActionType { deeplink, url, dismiss, custom }
 
 enum PopupButtonStyle { primary, secondary }
 
@@ -32,6 +32,20 @@ T? _enumByName<T extends Enum>(List<T> values, Object? name) {
 String? _string(Object? value) => value is String ? value : null;
 
 Map<String, dynamic>? _map(Object? value) => value is Map ? value.cast<String, dynamic>() : null;
+
+/// The usable pairs of a `customData` array. An entry without a non-blank string key and a string
+/// value is dropped. A repeated key keeps its last value, as in an FCM data payload.
+Map<String, String> _customData(Object? json) {
+  final data = <String, String>{};
+  if (json is! List) return data;
+  for (final entry in json) {
+    final map = _map(entry);
+    final key = _string(map?['key'])?.trim();
+    final value = _string(map?['value']);
+    if (key != null && key.isNotEmpty && value != null) data[key] = value;
+  }
+  return data;
+}
 
 /// Which sizes, positions and how many buttons each layout allows (`POPUP_LAYOUTS`).
 class PopupLayoutSpec {
@@ -100,16 +114,25 @@ class PopupLayoutSpec {
 }
 
 class PopupAction {
-  const PopupAction({required this.type, this.value});
+  const PopupAction({required this.type, this.value, this.customData});
 
   final PopupActionType type;
   final String? value;
 
-  /// Null when the type is unknown. A deeplink or url without a value acts as dismiss.
+  /// The key/value pairs of a `custom` action, for the app's `onCustomAction`.
+  final Map<String, String>? customData;
+
+  /// Null when the type is unknown. A deeplink or url without a value, or a custom action with no
+  /// usable pairs, acts as dismiss.
   static PopupAction? tryParse(Object? json) {
     final map = _map(json);
     final type = _enumByName(PopupActionType.values, map?['type']);
     if (type == null) return null;
+    if (type == PopupActionType.custom) {
+      final data = _customData(map!['customData']);
+      if (data.isEmpty) return const PopupAction(type: PopupActionType.dismiss);
+      return PopupAction(type: type, customData: Map.unmodifiable(data));
+    }
     final value = _string(map!['value'])?.trim();
     if (type != PopupActionType.dismiss && (value == null || value.isEmpty)) {
       return const PopupAction(type: PopupActionType.dismiss);
@@ -117,7 +140,14 @@ class PopupAction {
     return PopupAction(type: type, value: type == PopupActionType.dismiss ? null : value);
   }
 
-  Map<String, dynamic> toJson() => {'type': type.name, if (value != null) 'value': value};
+  Map<String, dynamic> toJson() => {
+    'type': type.name,
+    if (value != null) 'value': value,
+    if (customData != null)
+      'customData': [
+        for (final MapEntry(:key, :value) in customData!.entries) {'key': key, 'value': value},
+      ],
+  };
 }
 
 class PopupButton {

@@ -239,6 +239,42 @@ void main() {
     await finish(tester);
   });
 
+  testWidgets('a session started by setPlayerToken keeps the init callbacks', (tester) async {
+    final received = <Map<String, String>>[];
+    source.result = PopupFetchResult(popups: const []);
+    await pumpApp(tester);
+    await controller.initWithToken(
+      apiKey: 'key',
+      playerToken: tokenFor('p1'),
+      baseUrl: 'https://inapp.test',
+      source: source,
+      onCustomAction: received.add,
+    );
+    await settle(tester);
+    controller.setPlayerToken(tokenFor('p2'));
+    await settle(tester);
+
+    controller.showTest(
+      const PopupContent(
+        layout: PopupLayout.modal,
+        size: PopupSize.md,
+        buttons: [
+          PopupButton(
+            label: 'Go',
+            style: PopupButtonStyle.primary,
+            action: PopupAction(type: PopupActionType.custom, customData: {'type': 'wallet'}),
+          ),
+        ],
+      ),
+    );
+    await tester.pump();
+    controller.tapButton(controller.current.value!, 0);
+    expect(received, [
+      {'type': 'wallet'},
+    ]);
+    await finish(tester);
+  });
+
   testWidgets('another workspace with the same player id is another player', (tester) async {
     await start(tester, tokenFor('p1'));
     controller.setPlayerToken(tokenFor('p1', wid: 'ws2'));
