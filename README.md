@@ -36,7 +36,7 @@ dependencies:
     git:
       url: https://github.com/gamingcrafts/optikpi-inapp-sdk.git
       path: flutter
-      ref: flutter-v0.1.0
+      ref: flutter-v0.2.0
 ```
 
 Then add the builder and route observer, and call `init` at login:
@@ -50,12 +50,9 @@ MaterialApp.router(
 );
 
 await OptikpiInApp.init(
-  workspaceId: '...',
-  playerId: user.id,
-  apiKey: '...',                                      // the workspace's in-app key
+  apiKey: '...',
+  playerToken: loginResponse.optikpiPlayerToken,   // signed by your server: docs/player-token-server.md
   baseUrl: 'https://app.optikpi.com/apigw',
-  onDeepLink: (link) => router.go(link),
-  blockedRoutes: ['/game/play', '/deposit'],
 );
 
 await OptikpiInApp.logout();                          // on logout

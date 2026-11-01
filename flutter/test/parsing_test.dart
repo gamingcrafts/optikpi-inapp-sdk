@@ -1,7 +1,9 @@
+import 'dart:convert';
 import 'dart:io';
 import 'dart:ui' show Color;
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:optikpi_inapp/src/logic/player_token.dart';
 import 'package:optikpi_inapp/optikpi_inapp.dart';
 import 'package:optikpi_inapp/src/source/mock_templates.dart';
 
@@ -104,10 +106,11 @@ void main() {
 
   test('mock pop-up ids are per player, like the server\'s', () async {
     PopupRequestContext player(String id) => PopupRequestContext(
-      baseUrl: defaultInAppBaseUrl,
+      baseUrl: 'https://inapp.test',
       workspaceId: 'ws1',
       playerId: id,
       apiKey: 'key',
+      playerToken: 'token',
     );
     final a = await PopupSource.mock().fetch(player('p1'));
     final b = await PopupSource.mock().fetch(player('p2'));
@@ -122,5 +125,26 @@ void main() {
           .intersection(b.popups.map((p) => p.trackingId).toSet()),
       isEmpty,
     );
+  });
+
+  group('player token (contract/fixtures/player-token-cases.json)', () {
+    final cases =
+        (jsonDecode(File('../contract/fixtures/player-token-cases.json').readAsStringSync())
+                as Map)['cases']
+            as List;
+    String encode(Object? value) =>
+        base64Url.encode(utf8.encode(jsonEncode(value))).replaceAll('=', '');
+    for (final item in cases.cast<Map<String, dynamic>>()) {
+      test(item['name'] as String, () {
+        final token =
+            item.containsKey('raw')
+                ? item['raw'] as String
+                : '${encode({'alg': 'ES256'})}.${encode(item['payload'])}.sig';
+        final claims = PlayerTokenClaims.tryRead(token);
+        final expected = item['expect'] as Map?;
+        expect(claims?.playerId, expected?['playerId']);
+        expect(claims?.workspaceId, expected?['workspaceId']);
+      });
+    }
   });
 }

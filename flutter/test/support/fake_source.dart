@@ -11,6 +11,13 @@ class FakeSource extends PopupSource {
   PopupFetchResult result;
   int fetches = 0;
   int failFetches = 0;
+
+  /// Answers every fetch and send with this HTTP status until cleared.
+  int? refuseWith;
+
+  /// Tokens seen, in order, on fetch and on send.
+  final List<String> fetchTokens = [];
+  final List<String> sendTokens = [];
   Future<void>? fetchGate;
 
   final List<List<PopupEvent>> sent = [];
@@ -26,7 +33,10 @@ class FakeSource extends PopupSource {
   @override
   Future<PopupFetchResult> fetch(PopupRequestContext context) async {
     fetches++;
+    fetchTokens.add(context.playerToken);
+    final status = refuseWith;
     if (fetchGate != null) await fetchGate;
+    if (status != null) throw PopupHttpException(status, '/v1/inapp/popups');
     if (failFetches > 0) {
       failFetches--;
       throw Exception('offline');
@@ -36,6 +46,8 @@ class FakeSource extends PopupSource {
 
   @override
   Future<void> sendEvents(PopupRequestContext context, List<PopupEvent> events) async {
+    sendTokens.add(context.playerToken);
+    if (refuseWith != null) throw PopupHttpException(refuseWith!, '/ingest/popup');
     if (sendGate != null) await sendGate;
     if (failSends > 0) {
       failSends--;

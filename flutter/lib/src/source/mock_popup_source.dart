@@ -30,6 +30,9 @@ class MockPopupSource extends PopupSource {
   final Map<String, String> playerData;
   final DateTime Function() _clock;
 
+  @override
+  bool get needsPlayerToken => false;
+
   /// Template order is newest first: each one is an hour older than the one before.
   static final DateTime _newest = DateTime.utc(2026, 10, 1, 12);
 

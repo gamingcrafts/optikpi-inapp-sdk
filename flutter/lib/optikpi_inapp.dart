@@ -18,8 +18,7 @@ export 'src/model/inapp_popup.dart' show InAppPopup, PopupFetchResult;
 export 'src/model/popup_content.dart';
 export 'src/render/popup_host.dart' show PopupHost;
 export 'src/render/popup_view.dart' show PopupKeys, PopupView;
-export 'src/source/popup_source.dart'
-    show PopupHttpException, PopupRequestContext, PopupSource, defaultInAppBaseUrl;
+export 'src/source/popup_source.dart' show PopupHttpException, PopupRequestContext, PopupSource;
 export 'src/version.dart' show optikpiInAppVersion;
 
 abstract final class OptikpiInApp {
@@ -49,39 +48,42 @@ abstract final class OptikpiInApp {
   /// For apps that track the location themselves instead of using [routeObserver].
   static void didChangeRoute(String route) => _controller.didChangeRoute(route);
 
-  /// Call on login, and at app start when a stored session is restored. Fetches at once, then
-  /// on foreground and screen changes, at most once per the server's `nextCheckAfterSec`.
+  /// Call on login, and at app start when a stored session is restored, with the `playerToken`
+  /// your server signed for this player. Fetches at once, then on foreground and screen changes,
+  /// at most once per the server's `nextCheckAfterSec`.
   ///
-  /// [source] defaults to the pull API at [baseUrl]; `PopupSource.mock()` serves the bundled
-  /// templates instead. [blockedRoutes] never show a pop-up (a path blocks itself and everything
-  /// under it). [onDeepLink] receives a button's `deeplink` value; without it the pop-up just
-  /// closes.
+  /// [baseUrl] is your environment's API gateway. [source] defaults to the pull API there;
+  /// `PopupSource.mock()` serves the bundled templates instead, and needs no real token.
+  /// [blockedRoutes] never show a pop-up (a path blocks itself and everything under it).
+  /// [onDeepLink] receives a button's `deeplink` value; without it the pop-up just closes.
+  ///
+  /// The player and workspace are read from the token. If it can't be read, the package logs
+  /// that and fetches nothing until [setPlayerToken].
   static Future<void> init({
-    required String workspaceId,
-    required String playerId,
     required String apiKey,
-    String? deviceKey,
-    String baseUrl = defaultInAppBaseUrl,
-    PopupSource? source,
+    required String playerToken,
+    required String baseUrl,
     PopupDeepLinkHandler? onDeepLink,
     List<String> blockedRoutes = const [],
+    PopupSource? source,
   }) {
-    return _controller.init(
-      context: PopupRequestContext(
-        baseUrl: baseUrl,
-        workspaceId: workspaceId,
-        playerId: playerId,
-        apiKey: apiKey,
-        deviceKey: deviceKey,
-      ),
+    return _controller.initWithToken(
+      apiKey: apiKey,
+      playerToken: playerToken,
+      baseUrl: baseUrl,
       source: source ?? PopupSource.http(),
       onDeepLink: onDeepLink,
       blockedRoutes: blockedRoutes,
     );
   }
 
-  /// Call on logout: stops fetching and drops this player's waiting pop-ups. Events already
-  /// recorded stay queued and are sent at the next init.
+  /// Call whenever your server gives you a new token. If the server refused the old one, fetching
+  /// and sending were paused, with events kept: this resumes them. A token for another player
+  /// starts that player from nothing.
+  static void setPlayerToken(String playerToken) => _controller.setPlayerToken(playerToken);
+
+  /// Call on logout: stops fetching and drops this player's waiting pop-ups. Events that can't
+  /// go now stay queued and are sent at this player's next session.
   static Future<void> logout() => _controller.logout();
 
   /// Draws [content] at once, past every rule, with no events. For a debug menu.

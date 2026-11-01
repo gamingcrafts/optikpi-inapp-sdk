@@ -60,11 +60,13 @@ class PopupEventQueue {
 
   Future<int> get length async => ((await _prefs()).getStringList(queueKey) ?? const []).length;
 
-  /// Sends what is queued for [context]'s workspace, grouped by player, in batches. A rejected
-  /// batch (an HTTP error) holds back that player's later batches; a network error stops the
-  /// flush. Either way the rest waits for the next call. Calls made while a flush runs share
-  /// it, and one more pass runs afterwards, with the latest caller's source and context, to pick
-  /// up events queued in the meantime (a logout and a new login can both land mid-flush).
+  /// Sends what is queued for [context]'s player, in batches: a player token speaks for one
+  /// player, so another player's events wait for that player's next session. A network error or
+  /// a refused batch stops the flush and the rest waits for the next call. A batch refused for
+  /// its token or key throws the [PopupHttpException], from the last pass only, so the caller
+  /// can pause. Calls made while a flush runs share it, and one more pass runs afterwards, with
+  /// the latest caller's source and context, to pick up events queued in the meantime (a logout
+  /// and a new login can both land mid-flush).
   Future<void> flush(PopupSource source, PopupRequestContext context) {
     if (_flushing != null) {
       _next = (source, context);
@@ -75,7 +77,12 @@ class PopupEventQueue {
         var args = (source, context);
         while (true) {
           _next = null;
-          await _flushOnce(args.$1, args.$2);
+          try {
+            await _flushOnce(args.$1, args.$2);
+          } on PopupHttpException {
+            // A newer token may be waiting in _next: it decides, not this one.
+            if (_next == null) rethrow;
+          }
           final next = _next;
           if (next == null) break;
           args = next;
@@ -90,40 +97,30 @@ class PopupEventQueue {
 
   Future<void> _flushOnce(PopupSource source, PopupRequestContext context) async {
     final prefs = await _prefs();
-    final pending = <String, List<_Queued>>{};
-    for (final raw in prefs.getStringList(queueKey) ?? const <String>[]) {
-      final item = _Queued.tryParse(raw);
-      if (item == null || item.workspaceId != context.workspaceId) continue;
-      pending.putIfAbsent(item.playerId, () => []).add(item);
-    }
-    for (final MapEntry(key: playerId, value: items) in pending.entries) {
-      final playerContext = PopupRequestContext(
-        baseUrl: context.baseUrl,
-        workspaceId: context.workspaceId,
-        playerId: playerId,
-        apiKey: context.apiKey,
-        deviceKey: playerId == context.playerId ? context.deviceKey : null,
-      );
-      for (var start = 0; start < items.length; start += batchSize) {
-        final batch = items.sublist(start, (start + batchSize).clamp(0, items.length));
-        try {
-          await source.sendEvents(playerContext, batch.map((q) => q.event).toList());
-        } on PopupHttpException catch (error) {
-          // This player's batch was refused; other players' events may still go.
-          inAppLog('event send for $playerId refused, will retry: $error');
-          break;
-        } catch (error) {
-          // Offline or timed out: nothing else will get through now.
-          inAppLog('event send failed, will retry: $error');
-          return;
-        }
-        final sent = batch.map((q) => q.raw).toSet();
-        final remaining =
-            (prefs.getStringList(queueKey) ?? const <String>[])
-                .where((raw) => !sent.contains(raw))
-                .toList();
-        await prefs.setStringList(queueKey, remaining);
+    final items = [
+      for (final raw in prefs.getStringList(queueKey) ?? const <String>[])
+        if (_Queued.tryParse(raw) case final item?)
+          if (item.workspaceId == context.workspaceId && item.playerId == context.playerId) item,
+    ];
+    for (var start = 0; start < items.length; start += batchSize) {
+      final batch = items.sublist(start, (start + batchSize).clamp(0, items.length));
+      try {
+        await source.sendEvents(context, batch.map((q) => q.event).toList());
+      } on PopupHttpException catch (error) {
+        inAppLog('event send refused, will retry: $error');
+        if (error.isAuthFailure) rethrow;
+        return;
+      } catch (error) {
+        // Offline or timed out: nothing else will get through now.
+        inAppLog('event send failed, will retry: $error');
+        return;
       }
+      final sent = batch.map((q) => q.raw).toSet();
+      final remaining =
+          (prefs.getStringList(queueKey) ?? const <String>[])
+              .where((raw) => !sent.contains(raw))
+              .toList();
+      await prefs.setStringList(queueKey, remaining);
     }
   }
 }

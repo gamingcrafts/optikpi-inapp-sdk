@@ -14,6 +14,7 @@ const ctx = PopupRequestContext(
   workspaceId: 'ws1',
   playerId: 'p1',
   apiKey: 'key',
+  playerToken: 'token',
 );
 
 class Harness {

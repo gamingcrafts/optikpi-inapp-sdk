@@ -21,10 +21,10 @@ dependencies:
     git:
       url: https://github.com/gamingcrafts/optikpi-inapp-sdk.git
       path: flutter
-      ref: flutter-v0.1.0
+      ref: flutter-v0.2.0
 ```
 
-If your build can't reach GitHub, unzip `optikpi_inapp-0.1.0.zip` into your repo instead (for
+If your build can't reach GitHub, unzip `optikpi_inapp-0.2.0.zip` into your repo instead (for
 example under `packages/optikpi_inapp/`) and use `path: packages/optikpi_inapp`.
 
 **2. Run `flutter pub get`.**
@@ -50,16 +50,24 @@ goes to the page, not the pop-up). If you already have a
 `builder`, wrap its result: `builder: (context, child) => OptikpiInApp.builder(context,
 yourBuilder(context, child))`.
 
-**4. Call `init` on login**, and at app start when you restore a saved session:
+**4. Call `init` on login**, and at app start when you restore a saved session. `playerToken` comes
+from your server, which signs it: see
+[`docs/player-token-server.md`](https://github.com/gamingcrafts/optikpi-inapp-sdk/blob/main/docs/player-token-server.md).
 
 ```dart
 await OptikpiInApp.init(
-  workspaceId: '...',          // from OptiKPI (keys the on-device queue; not sent)
-  playerId: user.id,           // the same id you send to OptiKPI
-  apiKey: '...',               // the workspace's in-app key, sent as a Bearer token
+  apiKey: '...',                         // the workspace's in-app key, sent as a Bearer token
+  playerToken: loginResponse.optikpiPlayerToken,
+  baseUrl: 'https://app.optikpi.com/apigw',
   onDeepLink: (link) => router.go(link),               // optional
   blockedRoutes: ['/dashboard/games/play', '/dashboard/deposit'],
 );
+```
+
+Whenever your server gives you a new token, on a session refresh for instance, pass it on:
+
+```dart
+OptikpiInApp.setPlayerToken(newToken);
 ```
 
 **5. Call `logout` on logout:**
@@ -74,9 +82,9 @@ await OptikpiInApp.logout();   // stops fetching, drops this player's waiting po
 |---|---|---|
 | `onDeepLink` | none | Receives a `deeplink` button's value (e.g. `app://cashier`). Map it to a route yourself. Without it, the pop-up just closes. |
 | `blockedRoutes` | `[]` | Screens that never show a pop-up: game play, cashier, KYC. A path blocks itself and everything under it, so `/dashboard/deposit` blocks `/dashboard/deposit/card` but not `/dashboard/deposit-log`. Write paths, not go_router route names (see below). |
-| `deviceKey` | none | Your FCM token. The server can check it against the player. |
-| `baseUrl` | placeholder | Your environment's API gateway, `https://{dev\|qa\|app}.optikpi.com/apigw`. Pop-ups come from `{baseUrl}/v1/inapp/popups` and events go to `{baseUrl}/ingest/popup`. |
-| `source` | the pull API | `PopupSource.mock()` serves the bundled sample pop-ups instead. It sends nothing and logs events when `debug` is on. |
+| `source` | the pull API | `PopupSource.mock()` serves the bundled sample pop-ups instead. It sends nothing, logs events when `debug` is on, and needs no real token. |
+
+`baseUrl` is required: your environment's API gateway, `https://{dev\|qa\|app}.optikpi.com/apigw`. Pop-ups come from `{baseUrl}/v1/inapp/popups` and events go to `{baseUrl}/ingest/popup`.
 
 Other members:
 - `OptikpiInApp.debug = true` logs what the package does with the prefix `[OptikpiInApp]`. It logs nothing otherwise.
@@ -86,6 +94,8 @@ Other members:
 ## What the package does
 
 - **Fetches** on `init`, when the app comes back to the foreground, and on each screen change, at most once per `nextCheckAfterSec` (default 5 min). It never fetches in the background. A failed fetch is silent and retried at the next fetch moment.
+- **Reads the token** for the player and workspace, without verifying it (the server does). If it can't read them, it logs that and fetches nothing until `setPlayerToken`.
+- **Pauses on a refused token.** On a `401` or `403` it stops fetching and sending and keeps queued events, until `setPlayerToken`. A token for another player starts that player from nothing; their predecessor's queued events wait for that player's next session. The queue holds 500 events across all players, and the oldest go first past that.
 - **Shows** at most one pop-up per screen visit, newest first. It never shows one on a blocked route or after it expires, and a banner or toast still up when the player moves to a blocked route is hidden. A hidden pop-up counts as shown (its impression was sent), so it doesn't come back, and no dismiss is sent for it. Each pop-up is shown once per device, even after a refetch.
 - **Acts on taps:**
   - `url` opens in the external browser or app.
@@ -103,6 +113,7 @@ Other members:
 ## Notes
 
 - **Route names with go_router.** The observer reads each page's name. go_router names a page after the route's `name:`, or its `path:` when it has none. So for routes with a `name:`, or paths with parameters like `/game/:id`, list the name or the pattern in `blockedRoutes`, or call `didChangeRoute` yourself with the real location.
+- **Moving from 0.1.0.** `init` no longer takes `workspaceId`, `playerId` or `deviceKey`, and `playerToken` and `baseUrl` are required.
 - **Other message types.** Only pop-ups exist today. A server entry with another `kind` is skipped, so an app on this version keeps working when new kinds arrive.
 - **Images.** The package loads the image before it shows the pop-up, then keeps the bytes in a small in-memory cache. `gradient:#a,#b` placeholder URLs draw as gradients.
 - **Storage.** In `shared_preferences`, under keys starting `optikpi_inapp.`: the ids already shown, the event queue, and the events already queued (for dedupe).
