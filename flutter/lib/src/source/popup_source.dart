@@ -8,10 +8,6 @@ import '../model/inapp_popup.dart';
 import '../version.dart';
 import 'mock_popup_source.dart';
 
-/// Placeholder until the pull API ships. `.invalid` never resolves, so nothing is sent anywhere.
-/// The real one is per environment: `https://{dev|qa|app}.optikpi.com/apigw`.
-const String defaultInAppBaseUrl = 'https://inapp.optikpi.invalid';
-
 /// Who is asking: one logged-in player in one workspace.
 class PopupRequestContext {
   const PopupRequestContext({
@@ -19,16 +15,20 @@ class PopupRequestContext {
     required this.workspaceId,
     required this.playerId,
     required this.apiKey,
-    this.deviceKey,
+    required this.playerToken,
   });
 
   final String baseUrl;
 
-  /// Not sent (the API key carries the workspace); keys the on-device event queue.
+  /// `wid` of [playerToken]. Not sent; keys the on-device event queue.
   final String workspaceId;
+
+  /// `sub` of [playerToken]. Not sent: the server takes the player from the token.
   final String playerId;
   final String apiKey;
-  final String? deviceKey;
+
+  /// Sent as `x-player-token`. Never log it.
+  final String playerToken;
 }
 
 /// Where pop-ups come from and where events go. Either call throws on failure.
@@ -42,6 +42,9 @@ abstract class PopupSource {
   /// [playerData] fills `{{merge_tags}}` the way the server will.
   factory PopupSource.mock({Map<String, String> playerData}) = MockPopupSource;
 
+  /// False for a source that talks to no server, which works without a real token.
+  bool get needsPlayerToken => true;
+
   Future<PopupFetchResult> fetch(PopupRequestContext context);
 
   Future<void> sendEvents(PopupRequestContext context, List<PopupEvent> events);
@@ -52,6 +55,10 @@ class PopupHttpException implements Exception {
 
   final int statusCode;
   final String path;
+
+  /// The server refused the player token or the key. API Gateway answers a refused token with
+  /// 403; only a request with no `authorization` header gets 401.
+  bool get isAuthFailure => statusCode == 401 || statusCode == 403;
 
   @override
   String toString() => 'HTTP $statusCode from $path';
@@ -65,25 +72,24 @@ class HttpPopupSource extends PopupSource {
 
   Map<String, String> _headers(PopupRequestContext context) => {
     'authorization': 'Bearer ${context.apiKey}',
-    if (context.deviceKey != null && context.deviceKey!.isNotEmpty)
-      'x-device-key': context.deviceKey!,
+    'x-player-token': context.playerToken,
     'x-sdk-version': 'optikpi_inapp-flutter/$optikpiInAppVersion',
     'accept': 'application/json',
   };
 
-  Uri _uri(PopupRequestContext context, String path, [Map<String, String>? query]) {
+  Uri _uri(PopupRequestContext context, String path) {
     final base =
         context.baseUrl.endsWith('/')
             ? context.baseUrl.substring(0, context.baseUrl.length - 1)
             : context.baseUrl;
-    return Uri.parse('$base$path').replace(queryParameters: query);
+    return Uri.parse('$base$path');
   }
 
   @override
   Future<PopupFetchResult> fetch(PopupRequestContext context) async {
     const path = '/v1/inapp/popups';
     final response = await _client
-        .get(_uri(context, path, {'playerId': context.playerId}), headers: _headers(context))
+        .get(_uri(context, path), headers: _headers(context))
         .timeout(_timeout);
     if (response.statusCode != 200) throw PopupHttpException(response.statusCode, path);
     return PopupFetchResult.fromJson(jsonDecode(utf8.decode(response.bodyBytes)));
@@ -97,10 +103,7 @@ class HttpPopupSource extends PopupSource {
         .post(
           _uri(context, path),
           headers: {..._headers(context), 'content-type': 'application/json'},
-          body: jsonEncode({
-            'playerId': context.playerId,
-            'events': events.map((e) => e.toJson()).toList(),
-          }),
+          body: jsonEncode({'events': events.map((e) => e.toJson()).toList()}),
         )
         .timeout(_timeout);
     if (response.statusCode < 200 || response.statusCode >= 300) {

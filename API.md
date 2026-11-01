@@ -1,9 +1,7 @@
 # In-app pop-up pull API (v1): the contract
 
-One contract for every OptiKPI in-app SDK in this repo. The Flutter SDK (`optikpi_inapp` 0.1.0)
-calls it today. The backend ticket (OK-1amxvnb3b9e) builds the fetch endpoint and the `popup`
-ingest provider. Until then the SDK runs against `PopupSource.mock()`, and its default base URL is a
-placeholder that never resolves (`https://inapp.optikpi.invalid`).
+One contract for every OptiKPI in-app SDK in this repo. The Flutter SDK (`optikpi_inapp` 0.2.0)
+calls it. `PopupSource.mock()` serves the bundled templates with no server, for demos and tests.
 
 Design rules come from the in-app pop-ups spec ("Delivery: pull"). The server stores each pop-up a
 campaign or workflow sends, and the app fetches it. The pop-up content is the `PopupContent`
@@ -18,15 +16,41 @@ SDK must read the same way.
 |---|---|
 | Base URL | per environment, `https://{dev\|qa\|app}.optikpi.com/apigw`, passed to the SDK's init (Flutter: `OptikpiInApp.init(baseUrl: …)`) |
 | `Authorization` | `Bearer {apiKey}`, the workspace's in-app integration key (required). The key carries the workspace, so no workspace header is sent. |
-| `x-device-key` | FCM token in the app, OptiKPI device ID on the web (optional in v1, see below) |
-| `x-sdk-version` | `{package}-{platform}/{version}`, e.g. `optikpi_inapp-flutter/0.1.0` (sent always, for support and metrics) |
+| `x-player-token` | The player token, a JWT signed by the operator's server (see below). |
+| `x-sdk-version` | `{package}-{platform}/{version}`, e.g. `optikpi_inapp-flutter/0.2.0` (sent always, for support and metrics) |
 
-Both calls send the same headers. The server resolves the workspace from the key and, when
-`x-device-key` is sent, checks that the device belongs to the player. A failed check returns
-`401`/`403`. The app treats a `401`, like every other non-2xx, as "try again at the next fetch
-moment": it never shows an error, and unsent events stay queued.
+Both calls send the same headers. The server resolves the workspace from the key and the player from
+the token.
 
-## `GET {baseUrl}/v1/inapp/popups?playerId={playerId}`
+### Player token
+
+The operator's login server signs it with a private key that OptiKPI never sees, and returns it to
+the app as `optikpiPlayerToken`. [`docs/player-token-server.md`](docs/player-token-server.md) is the
+operator's guide.
+
+- Header: `alg: ES256`, `typ: JWT`, `kid`.
+- Payload: `sub` (player ID, string), `wid` (workspace ID), `exp` (whole seconds, at most 90 days ahead).
+
+A token that is present must verify, whatever the workspace's settings. With no token, the request
+is refused if the workspace has **Require player token** on, and otherwise takes the older path,
+where `playerId` in the query or body names the player. SDKs from 0.2.0 always send a token.
+
+An SDK reads `sub` and `wid` from the payload, without verifying, to key its on-device state. If it
+can't read them it logs that and doesn't fetch. [`contract/fixtures/player-token-cases.json`](contract/fixtures/player-token-cases.json)
+has the cases.
+
+### Refusals
+
+| Status | Means |
+|---|---|
+| `401` | No `Authorization` header. |
+| `403` | A bad key, or a token that is refused, missing while required, or for another player than the `playerId` sent. |
+
+On a `401` or `403` the app stops fetching and sending, keeps its queued events, and resumes when it
+is given a new token. On every other non-2xx it tries again at the next fetch moment. It never shows
+an error.
+
+## `GET {baseUrl}/v1/inapp/popups`
 
 Returns the player's waiting pop-ups.
 
@@ -75,7 +99,6 @@ no pop-up events endpoint of its own.
 
 ```json
 {
-  "playerId": "p_123",
   "events": [
     { "trackingId": "trk_41d0…", "type": "impression", "at": "2026-10-28T09:20:01.123Z" },
     { "trackingId": "trk_41d0…", "type": "click", "at": "2026-10-28T09:20:04.870Z", "buttonIndex": 0 }
@@ -95,11 +118,15 @@ Delivery from the app:
 - Events go into a queue on the device and are sent in batches of up to 50, about 2 s after the last one. They are also sent at init, on foreground and after each fetch.
 - If a send fails, the batch stays queued and is sent again later. **Retries are at-least-once**, so the server must dedupe on `(trackingId, type)`. The app sends each pair once, but a lost `204` means the server sees it again.
 - A dismiss button is a `click`, not a `dismiss`. A click on a button that also closes the pop-up sends no `dismiss`.
-- Events stay queued across logout and are sent under the player they were recorded for.
+- Events stay queued across logout and go at the next session of the player they were recorded for. A token speaks for one player, so another player's session can't send them. The queue holds 500 events on a device, across all players: past that, the oldest go first.
 
 Mapping to campaign statuses (ticket 1c): `impression` → Delivered/Open, `click` → Click, `dismiss` → a new Dismissed status.
 
+The record stored carries the player from the token. A `playerId` in the body is optional, and one
+naming another player gets `403`.
+
 ## What changed from the brief's proposal
+- **The player comes from a signed token** (`x-player-token`), not from `playerId`, and `x-device-key` is gone. (Puru, 2026-10-31.)
 - **Events go to `POST {baseUrl}/ingest/popup`**, the shared ingest webhook, instead of `POST /v1/inapp/events`. The body is unchanged. (Puru, 2026-10-28.)
 - **Auth is `Authorization: Bearer {apiKey}`** on both calls, instead of `x-api-key` plus `x-workspace-id`. (Puru, 2026-10-28.)
 - **Added `x-sdk-version`** for support and metrics.

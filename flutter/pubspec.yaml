@@ -1,6 +1,6 @@
 name: optikpi_inapp
 description: OptiKPI in-app pop-ups for Flutter apps. Fetches a player's waiting pop-ups, draws them over the app and reports impression, click and dismiss.
-version: 0.1.0
+version: 0.2.0
 publish_to: 'none'
 repository: https://github.com/gamingcrafts/optikpi-inapp-sdk/tree/main/flutter
 

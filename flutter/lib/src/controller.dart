@@ -7,6 +7,7 @@ import 'events/event_queue.dart';
 import 'events/popup_event.dart';
 import 'log.dart';
 import 'logic/fetch_throttle.dart';
+import 'logic/player_token.dart';
 import 'logic/show_rules.dart';
 import 'logic/shown_store.dart';
 import 'model/inapp_popup.dart';
@@ -35,18 +36,34 @@ class ActivePopup {
   PopupContent get content => popup.content;
 }
 
+/// What init was given, so `setPlayerToken` can start a session from a new token alone.
+class _Setup {
+  const _Setup(this.apiKey, this.baseUrl, this.source, this.onDeepLink, this.blockedRoutes);
+
+  final String apiKey;
+  final String baseUrl;
+  final PopupSource source;
+  final PopupDeepLinkHandler? onDeepLink;
+  final List<String> blockedRoutes;
+}
+
 /// Everything that belongs to one logged-in player. Replaced on init, dropped on logout; an
-/// async step compares `identical(session, _session)` to know whether it is still wanted.
+/// async step compares `identical(session, _session)` to know whether it is still wanted, and
+/// `identical(context, session.context)` to know whether its token still is.
 class _Session {
   _Session(this.context, this.source, this.onDeepLink, this.blockedRoutes);
 
-  final PopupRequestContext context;
+  PopupRequestContext context;
   final PopupSource source;
   final PopupDeepLinkHandler? onDeepLink;
   final List<String> blockedRoutes;
   final FetchThrottle throttle = FetchThrottle();
   List<InAppPopup> waiting = const [];
   bool fetching = false;
+
+  /// The server refused the token, or the token can't be read: no fetch and no send until
+  /// `setPlayerToken`. Queued events stay queued.
+  bool paused = false;
 }
 
 class OptikpiInAppController with WidgetsBindingObserver {
@@ -77,6 +94,8 @@ class OptikpiInAppController with WidgetsBindingObserver {
   final ValueNotifier<ActivePopup?> current = ValueNotifier(null);
 
   _Session? _session;
+  _Setup? _setup;
+  String? _lastPlayerKey;
   bool _observing = false;
   Timer? _flushTimer;
   int _testCount = 0;
@@ -95,8 +114,86 @@ class OptikpiInAppController with WidgetsBindingObserver {
   @visibleForTesting
   Future<void>? lastShow;
 
+  /// The init started by the last `setPlayerToken` that needed one, for tests.
+  @visibleForTesting
+  Future<void>? lastInit;
+
   bool get isActive => _session != null;
+
+  /// True while the session waits for `setPlayerToken`.
+  bool get isPaused => _session?.paused ?? false;
   String? get route => _route;
+
+  /// Starts from a player token. An unreadable one logs and fetches nothing until
+  /// [setPlayerToken] brings a good one; a source that talks to no server doesn't need one.
+  Future<void> initWithToken({
+    required String apiKey,
+    required String playerToken,
+    required String baseUrl,
+    required PopupSource source,
+    PopupDeepLinkHandler? onDeepLink,
+    List<String> blockedRoutes = const [],
+  }) async {
+    final setup = _Setup(apiKey, baseUrl, source, onDeepLink, blockedRoutes);
+    final context = _contextFor(setup, playerToken);
+    if (context == null) {
+      inAppLog('player token unreadable: not fetching');
+      _endSession(flush: false);
+      _setup = setup;
+      return;
+    }
+    return init(
+      context: context,
+      source: source,
+      onDeepLink: onDeepLink,
+      blockedRoutes: blockedRoutes,
+    );
+  }
+
+  PopupRequestContext? _contextFor(_Setup setup, String playerToken) {
+    final claims = PlayerTokenClaims.tryRead(playerToken);
+    if (claims == null && setup.source.needsPlayerToken) return null;
+    return PopupRequestContext(
+      baseUrl: setup.baseUrl,
+      workspaceId: claims?.workspaceId ?? 'mock',
+      playerId: claims?.playerId ?? 'mock',
+      apiKey: setup.apiKey,
+      playerToken: playerToken,
+    );
+  }
+
+  /// A fresh token. The same player carries on, and a paused session resumes; another player
+  /// starts from nothing, as after a logout. Queued events stay, each with its own player.
+  void setPlayerToken(String playerToken) {
+    final setup = _setup;
+    if (setup == null) {
+      inAppLog('setPlayerToken before init: ignored');
+      return;
+    }
+    final session = _session;
+    final context = _contextFor(setup, playerToken);
+    if (context == null) {
+      inAppLog('player token unreadable: not fetching');
+      session?.paused = true;
+      return;
+    }
+    if (session == null ||
+        session.context.playerId != context.playerId ||
+        session.context.workspaceId != context.workspaceId) {
+      lastInit = init(
+        context: context,
+        source: setup.source,
+        onDeepLink: setup.onDeepLink,
+        blockedRoutes: setup.blockedRoutes,
+      ).catchError((Object error) => inAppLog('init failed: $error'));
+      return;
+    }
+    session.context = context;
+    session.paused = false;
+    inAppLog('player token replaced');
+    unawaited(_flush(session));
+    _fetchMoment();
+  }
 
   Future<void> init({
     required PopupRequestContext context,
@@ -104,9 +201,21 @@ class OptikpiInAppController with WidgetsBindingObserver {
     PopupDeepLinkHandler? onDeepLink,
     List<String> blockedRoutes = const [],
   }) async {
-    _endSession(flush: false);
+    // Another player's token can't send what this one earned, so it goes now, if the server
+    // still takes this token. What can't go waits for this player's next session.
+    final previous = _session;
+    final switching =
+        previous != null &&
+        (previous.context.playerId != context.playerId ||
+            previous.context.workspaceId != context.workspaceId);
+    _endSession(flush: switching && !previous.paused);
     final session = _Session(context, source, onDeepLink, List.unmodifiable(blockedRoutes));
     _session = session;
+    _setup = _Setup(context.apiKey, context.baseUrl, source, onDeepLink, blockedRoutes);
+    // The one-per-visit rule is about one player: a new one on the same screen starts fresh.
+    final playerKey = '${context.workspaceId}/${context.playerId}';
+    if (playerKey != _lastPlayerKey) _shownThisVisit = false;
+    _lastPlayerKey = playerKey;
     if (!_observing) {
       WidgetsBinding.instance.addObserver(this);
       _observing = true;
@@ -120,7 +229,8 @@ class OptikpiInAppController with WidgetsBindingObserver {
 
   Future<void> logout() async {
     inAppLog('logout');
-    _endSession(flush: true);
+    _endSession(flush: !(_session?.paused ?? false));
+    _setup = null;
     if (_observing) {
       WidgetsBinding.instance.removeObserver(this);
       _observing = false;
@@ -134,7 +244,7 @@ class OptikpiInAppController with WidgetsBindingObserver {
     _flushTimer = null;
     final active = current.value;
     if (active != null && !active.isTest) current.value = null;
-    // Events already earned still go: one last try now, the rest at the next init.
+    // Events already earned still go: one last try now, the rest at this player's next session.
     if (flush && session != null) {
       unawaited(
         events
@@ -158,10 +268,17 @@ class OptikpiInAppController with WidgetsBindingObserver {
   }
 
   Future<void> _maybeFetch(_Session session) async {
-    if (session.fetching || !_inForeground || !session.throttle.canFetch(_clock())) return;
+    if (session.paused ||
+        session.fetching ||
+        !_inForeground ||
+        !session.throttle.canFetch(_clock())) {
+      return;
+    }
     session.fetching = true;
+    final context = session.context;
+    var tokenChanged = false;
     try {
-      final result = await session.source.fetch(session.context);
+      final result = await session.source.fetch(context);
       if (!identical(session, _session)) return;
       session.throttle.recordResponse(_clock(), result.nextCheckAfterSec);
       session.waiting = result.popups;
@@ -171,12 +288,26 @@ class OptikpiInAppController with WidgetsBindingObserver {
       );
       unawaited(_flush(session));
       _showMoment();
+    } on PopupHttpException catch (error) {
+      inAppLog('fetch failed: $error');
+      if (error.isAuthFailure) tokenChanged = !_pauseIfCurrent(session, context);
     } catch (error) {
       // Silent by contract; the next fetch moment tries again.
       inAppLog('fetch failed: $error');
     } finally {
       session.fetching = false;
     }
+    // Refused, but a new token arrived meanwhile and its fetch found this one running.
+    if (tokenChanged && identical(session, _session)) _fetchMoment();
+  }
+
+  /// Stops fetching and sending until `setPlayerToken`. False when [context] is out of date, so
+  /// its refusal says nothing about the token in use now.
+  bool _pauseIfCurrent(_Session session, PopupRequestContext context) {
+    if (!identical(context, session.context)) return false;
+    inAppLog('player token refused: paused until setPlayerToken');
+    session.paused = true;
+    return true;
   }
 
   @override
@@ -374,9 +505,12 @@ class OptikpiInAppController with WidgetsBindingObserver {
   }
 
   Future<void> _flush(_Session session) async {
-    if (!_inForeground) return;
+    if (session.paused || !_inForeground) return;
+    final context = session.context;
     try {
-      await events.flush(session.source, session.context);
+      await events.flush(session.source, context);
+    } on PopupHttpException catch (error) {
+      if (error.isAuthFailure) _pauseIfCurrent(session, context);
     } catch (error) {
       inAppLog('flush failed: $error');
     }
@@ -386,6 +520,8 @@ class OptikpiInAppController with WidgetsBindingObserver {
   @visibleForTesting
   void reset() {
     _endSession(flush: false);
+    _setup = null;
+    _lastPlayerKey = null;
     current.value = null;
     _route = null;
     _visit = 0;

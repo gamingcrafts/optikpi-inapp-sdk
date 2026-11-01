@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.2.0
+
+The player now comes from a token signed by the operator's server, not from the app.
+- **Breaking:** `init` takes `apiKey`, `playerToken` and `baseUrl`, all required. `workspaceId`, `playerId` and `deviceKey` are gone, along with the `defaultInAppBaseUrl` placeholder.
+- New `setPlayerToken`, for session refresh.
+- Sends `x-player-token` on fetch and events. `playerId` is no longer sent, and neither is `x-device-key`.
+- Reads `sub` and `wid` from the token, unverified, for on-device keys. If it can't read them, it logs and doesn't fetch.
+- On a `401` or `403`, stops fetching and sending and keeps queued events, until `setPlayerToken`. API Gateway answers a refused token with `403`.
+- A token for another player starts that player from nothing. Queued events stay with the player they were recorded for, and go at that player's next session, since a token speaks for one player.
+- `PopupSource.mock()` needs no real token.
+
 ## 0.1.0
 
 First pilot release.

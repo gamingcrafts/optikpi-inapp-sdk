@@ -1,0 +1,16 @@
+{
+  "about": "How an SDK reads a player token on the device (see API.md): sub and wid from the payload, with no verification. `token` is a JWT whose payload is `payload` (base64url, signature not checked), or the literal `raw` string. `expect` is null when the SDK must log and not fetch.",
+  "cases": [
+    { "name": "a normal token", "payload": { "sub": "p1", "wid": "ws1", "exp": 1 }, "expect": { "playerId": "p1", "workspaceId": "ws1" } },
+    { "name": "non-ASCII sub", "payload": { "sub": "jugador-ñ", "wid": "ws1" }, "expect": { "playerId": "jugador-ñ", "workspaceId": "ws1" } },
+    { "name": "no sub", "payload": { "wid": "ws1" }, "expect": null },
+    { "name": "empty sub", "payload": { "sub": "", "wid": "ws1" }, "expect": null },
+    { "name": "numeric sub", "payload": { "sub": 12, "wid": "ws1" }, "expect": null },
+    { "name": "no wid", "payload": { "sub": "p1" }, "expect": null },
+    { "name": "payload not an object", "payload": ["p1"], "expect": null },
+    { "name": "empty string", "raw": "", "expect": null },
+    { "name": "two segments", "raw": "a.b", "expect": null },
+    { "name": "payload not base64", "raw": "a.***.c", "expect": null },
+    { "name": "payload not JSON", "raw": "a.bm9wZQ.c", "expect": null }
+  ]
+}
