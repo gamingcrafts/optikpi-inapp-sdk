@@ -16,6 +16,7 @@ import 'render/popup_image_cache.dart';
 import 'source/popup_source.dart';
 
 typedef PopupDeepLinkHandler = void Function(String link);
+typedef PopupCustomActionHandler = void Function(Map<String, String> data);
 typedef PopupUrlLauncher = Future<bool> Function(Uri uri);
 
 Future<bool> _launchExternal(Uri uri) =>
@@ -24,11 +25,18 @@ Future<bool> _launchExternal(Uri uri) =>
 /// The pop-up on screen, and who it was fetched for. Events and actions use this, not the
 /// current session, so a logout while it is up can't send its events under another player.
 class ActivePopup {
-  ActivePopup._(this.popup, this.context, this.onDeepLink, {required this.isTest});
+  ActivePopup._(
+    this.popup,
+    this.context,
+    this.onDeepLink,
+    this.onCustomAction, {
+    required this.isTest,
+  });
 
   final InAppPopup popup;
   final PopupRequestContext? context;
   final PopupDeepLinkHandler? onDeepLink;
+  final PopupCustomActionHandler? onCustomAction;
 
   /// Shown from `OptikpiInApp.showTest`: no events, not remembered as shown.
   final bool isTest;
@@ -38,12 +46,20 @@ class ActivePopup {
 
 /// What init was given, so `setPlayerToken` can start a session from a new token alone.
 class _Setup {
-  const _Setup(this.apiKey, this.baseUrl, this.source, this.onDeepLink, this.blockedRoutes);
+  const _Setup(
+    this.apiKey,
+    this.baseUrl,
+    this.source,
+    this.onDeepLink,
+    this.onCustomAction,
+    this.blockedRoutes,
+  );
 
   final String apiKey;
   final String baseUrl;
   final PopupSource source;
   final PopupDeepLinkHandler? onDeepLink;
+  final PopupCustomActionHandler? onCustomAction;
   final List<String> blockedRoutes;
 }
 
@@ -51,11 +67,12 @@ class _Setup {
 /// async step compares `identical(session, _session)` to know whether it is still wanted, and
 /// `identical(context, session.context)` to know whether its token still is.
 class _Session {
-  _Session(this.context, this.source, this.onDeepLink, this.blockedRoutes);
+  _Session(this.context, this.source, this.onDeepLink, this.onCustomAction, this.blockedRoutes);
 
   PopupRequestContext context;
   final PopupSource source;
   final PopupDeepLinkHandler? onDeepLink;
+  final PopupCustomActionHandler? onCustomAction;
   final List<String> blockedRoutes;
   final FetchThrottle throttle = FetchThrottle();
   List<InAppPopup> waiting = const [];
@@ -132,9 +149,10 @@ class OptikpiInAppController with WidgetsBindingObserver {
     required String baseUrl,
     required PopupSource source,
     PopupDeepLinkHandler? onDeepLink,
+    PopupCustomActionHandler? onCustomAction,
     List<String> blockedRoutes = const [],
   }) async {
-    final setup = _Setup(apiKey, baseUrl, source, onDeepLink, blockedRoutes);
+    final setup = _Setup(apiKey, baseUrl, source, onDeepLink, onCustomAction, blockedRoutes);
     final context = _contextFor(setup, playerToken);
     if (context == null) {
       inAppLog('player token unreadable: not fetching');
@@ -146,6 +164,7 @@ class OptikpiInAppController with WidgetsBindingObserver {
       context: context,
       source: source,
       onDeepLink: onDeepLink,
+      onCustomAction: onCustomAction,
       blockedRoutes: blockedRoutes,
     );
   }
@@ -184,6 +203,7 @@ class OptikpiInAppController with WidgetsBindingObserver {
         context: context,
         source: setup.source,
         onDeepLink: setup.onDeepLink,
+        onCustomAction: setup.onCustomAction,
         blockedRoutes: setup.blockedRoutes,
       ).catchError((Object error) => inAppLog('init failed: $error'));
       return;
@@ -199,6 +219,7 @@ class OptikpiInAppController with WidgetsBindingObserver {
     required PopupRequestContext context,
     required PopupSource source,
     PopupDeepLinkHandler? onDeepLink,
+    PopupCustomActionHandler? onCustomAction,
     List<String> blockedRoutes = const [],
   }) async {
     // Another player's token can't send what this one earned, so it goes now, if the server
@@ -209,9 +230,22 @@ class OptikpiInAppController with WidgetsBindingObserver {
         (previous.context.playerId != context.playerId ||
             previous.context.workspaceId != context.workspaceId);
     _endSession(flush: switching && !previous.paused);
-    final session = _Session(context, source, onDeepLink, List.unmodifiable(blockedRoutes));
+    final session = _Session(
+      context,
+      source,
+      onDeepLink,
+      onCustomAction,
+      List.unmodifiable(blockedRoutes),
+    );
     _session = session;
-    _setup = _Setup(context.apiKey, context.baseUrl, source, onDeepLink, blockedRoutes);
+    _setup = _Setup(
+      context.apiKey,
+      context.baseUrl,
+      source,
+      onDeepLink,
+      onCustomAction,
+      blockedRoutes,
+    );
     // The one-per-visit rule is about one player: a new one on the same screen starts fresh.
     final playerKey = '${context.workspaceId}/${context.playerId}';
     if (playerKey != _lastPlayerKey) _shownThisVisit = false;
@@ -392,11 +426,21 @@ class OptikpiInAppController with WidgetsBindingObserver {
     _shownThisVisit = true;
     session.waiting = session.waiting.where((p) => p.id != picked.id).toList(growable: false);
     inAppLog('show ${picked.id} (${picked.content.layout.name}) on $_route');
-    current.value = ActivePopup._(picked, session.context, session.onDeepLink, isTest: false);
+    current.value = ActivePopup._(
+      picked,
+      session.context,
+      session.onDeepLink,
+      session.onCustomAction,
+      isTest: false,
+    );
   }
 
   /// Draws [content] now, past every rule. For the app's debug menu: no events, not remembered.
-  void showTest(PopupContent content, {PopupDeepLinkHandler? onDeepLink}) {
+  void showTest(
+    PopupContent content, {
+    PopupDeepLinkHandler? onDeepLink,
+    PopupCustomActionHandler? onCustomAction,
+  }) {
     _testCount++;
     final popup = InAppPopup(
       id: 'test-$_testCount',
@@ -404,7 +448,13 @@ class OptikpiInAppController with WidgetsBindingObserver {
       createdAt: _clock().toUtc(),
       content: content,
     );
-    current.value = ActivePopup._(popup, null, onDeepLink ?? _session?.onDeepLink, isTest: true);
+    current.value = ActivePopup._(
+      popup,
+      null,
+      onDeepLink ?? _session?.onDeepLink,
+      onCustomAction ?? _session?.onCustomAction,
+      isTest: true,
+    );
   }
 
   // ---- what the host reports ------------------------------------------------------------------
@@ -455,6 +505,9 @@ class OptikpiInAppController with WidgetsBindingObserver {
         break;
       case PopupActionType.deeplink:
         if (value != null) active.onDeepLink?.call(value);
+      case PopupActionType.custom:
+        final data = action.customData;
+        if (data != null) active.onCustomAction?.call(data);
       case PopupActionType.url:
         final uri = value == null ? null : Uri.tryParse(value);
         if (uri == null) break;

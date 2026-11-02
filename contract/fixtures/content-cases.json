@@ -147,6 +147,86 @@
       }
     },
     {
+      "name": "a custom action keeps its pairs",
+      "set": {"buttons": [{"label": "X", "style": "primary", "action": {"type": "custom", "customData": [{"key": "type", "value": "offers"}, {"key": "supplemental", "value": "id=42"}]}}]},
+      "expect": {"buttons": [{"action": {"type": "custom", "value": null, "customData": [{"key": "type", "value": "offers"}, {"key": "supplemental", "value": "id=42"}]}}]}
+    },
+    {
+      "name": "a custom action with a key nobody has seen is kept",
+      "set": {"buttons": [{"label": "X", "style": "primary", "action": {"type": "custom", "customData": [{"key": "screen", "value": "vip"}]}}]},
+      "expect": {"buttons": [{"action": {"type": "custom", "customData": [{"key": "screen", "value": "vip"}]}}]}
+    },
+    {
+      "name": "a custom value is passed as it arrives, merge tag or not",
+      "set": {"buttons": [{"label": "X", "style": "primary", "action": {"type": "custom", "customData": [{"key": "tag", "value": " {{first_name}} "}]}}]},
+      "expect": {"buttons": [{"action": {"type": "custom", "customData": [{"key": "tag", "value": " {{first_name}} "}]}}]}
+    },
+    {
+      "name": "custom without customData acts as dismiss",
+      "set": {"buttons": [{"label": "X", "style": "primary", "action": {"type": "custom"}}]},
+      "expect": { "buttons": [{ "action": { "type": "dismiss", "value": null, "customData": null } }] }
+    },
+    {
+      "name": "custom with an empty customData acts as dismiss",
+      "set": {"buttons": [{"label": "X", "style": "primary", "action": {"type": "custom", "customData": []}}]},
+      "expect": { "buttons": [{ "action": { "type": "dismiss", "value": null, "customData": null } }] }
+    },
+    {
+      "name": "custom with a customData that is not an array acts as dismiss",
+      "set": {"buttons": [{"label": "X", "style": "primary", "action": {"type": "custom", "customData": {"key": "type", "value": "offers"}}}]},
+      "expect": { "buttons": [{ "action": { "type": "dismiss", "value": null, "customData": null } }] }
+    },
+    {
+      "name": "custom with null customData acts as dismiss",
+      "set": {"buttons": [{"label": "X", "style": "primary", "action": {"type": "custom", "customData": null}}]},
+      "expect": { "buttons": [{ "action": { "type": "dismiss", "value": null, "customData": null } }] }
+    },
+    {
+      "name": "custom with only a blank key acts as dismiss",
+      "set": {"buttons": [{"label": "X", "style": "primary", "action": {"type": "custom", "customData": [{"key": "  ", "value": "x"}]}}]},
+      "expect": { "buttons": [{ "action": { "type": "dismiss", "value": null, "customData": null } }] }
+    },
+    {
+      "name": "custom with only a non-string value acts as dismiss",
+      "set": {"buttons": [{"label": "X", "style": "primary", "action": {"type": "custom", "customData": [{"key": "id", "value": 5}]}}]},
+      "expect": { "buttons": [{ "action": { "type": "dismiss", "value": null, "customData": null } }] }
+    },
+    {
+      "name": "custom with only non-object entries acts as dismiss",
+      "set": {"buttons": [{"label": "X", "style": "primary", "action": {"type": "custom", "customData": ["type", null, 3]}}]},
+      "expect": { "buttons": [{ "action": { "type": "dismiss", "value": null, "customData": null } }] }
+    },
+    {
+      "name": "an unusable pair is dropped and the rest kept",
+      "set": {"buttons": [{"label": "X", "style": "primary", "action": {"type": "custom", "customData": [{"key": "", "value": "x"}, {"key": "id", "value": 5}, {"key": "type", "value": "wallet"}]}}]},
+      "expect": {"buttons": [{"action": {"type": "custom", "customData": [{"key": "type", "value": "wallet"}]}}]}
+    },
+    {
+      "name": "a key is trimmed",
+      "set": {"buttons": [{"label": "X", "style": "primary", "action": {"type": "custom", "customData": [{"key": " type ", "value": "wallet"}]}}]},
+      "expect": {"buttons": [{"action": {"type": "custom", "customData": [{"key": "type", "value": "wallet"}]}}]}
+    },
+    {
+      "name": "a repeated key keeps its last value",
+      "set": {"buttons": [{"label": "X", "style": "primary", "action": {"type": "custom", "customData": [{"key": "type", "value": "a"}, {"key": "type", "value": "b"}]}}]},
+      "expect": {"buttons": [{"action": {"type": "custom", "customData": [{"key": "type", "value": "b"}]}}]}
+    },
+    {
+      "name": "customData on another action type is ignored",
+      "set": {"buttons": [{"label": "X", "style": "primary", "action": {"type": "deeplink", "value": "app://x", "customData": [{"key": "type", "value": "offers"}, {"key": "supplemental", "value": "id=42"}]}}]},
+      "expect": { "buttons": [{ "action": { "type": "deeplink", "value": "app://x", "customData": null } }] }
+    },
+    {
+      "name": "an image tapAction can be custom",
+      "set": { "layout": "imageOnly", "image": { "url": "https://cdn.example/a.png", "tapAction": { "type": "custom", "customData": [{ "key": "type", "value": "wallet" }] } } },
+      "expect": { "image": { "url": "https://cdn.example/a.png", "tapAction": { "type": "custom", "customData": [{ "key": "type", "value": "wallet" }] } } }
+    },
+    {
+      "name": "a custom image tapAction with no pairs acts as dismiss",
+      "set": { "layout": "imageOnly", "image": { "url": "https://cdn.example/a.png", "tapAction": { "type": "custom", "customData": [] } } },
+      "expect": { "image": { "tapAction": { "type": "dismiss" } } }
+    },
+    {
       "name": "wrong types everywhere still parse",
       "set": { "title": 5, "body": ["x"], "close": "yes", "mergeTags": "x" },
       "expect": { "title": null, "body": null, "close": { "show": true }, "mergeTags": null }

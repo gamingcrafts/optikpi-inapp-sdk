@@ -36,7 +36,7 @@ dependencies:
     git:
       url: https://github.com/gamingcrafts/optikpi-inapp-sdk.git
       path: flutter
-      ref: flutter-v0.2.0
+      ref: flutter-v0.3.0
 ```
 
 Then add the builder and route observer, and call `init` at login:

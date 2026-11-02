@@ -18,7 +18,10 @@ const ctx = PopupRequestContext(
 );
 
 class Harness {
-  Harness(this.tester, {FakeSource? source, this.images}) : source = source ?? FakeSource();
+  Harness(this.tester, {FakeSource? source, this.images, this.onCustomAction})
+    : source = source ?? FakeSource();
+
+  final PopupCustomActionHandler? onCustomAction;
 
   final PopupImageCache? images;
 
@@ -51,6 +54,7 @@ class Harness {
       context: ctx,
       source: source,
       onDeepLink: deepLinks.add,
+      onCustomAction: onCustomAction,
       blockedRoutes: blockedRoutes,
     );
     await settle();
@@ -246,8 +250,16 @@ void main() {
   });
 
   group('act and track', () {
-    Future<Harness> showing(WidgetTester tester, InAppPopup popup) async {
-      final h = Harness(tester, source: FakeSource(result: PopupFetchResult(popups: [popup])));
+    Future<Harness> showing(
+      WidgetTester tester,
+      InAppPopup popup, {
+      PopupCustomActionHandler? onCustomAction,
+    }) async {
+      final h = Harness(
+        tester,
+        source: FakeSource(result: PopupFetchResult(popups: [popup])),
+        onCustomAction: onCustomAction,
+      );
       await h.pumpApp();
       await h.route('/dashboard');
       await h.init();
@@ -312,6 +324,98 @@ void main() {
       await h.tap(PopupKeys.button(0));
       expect(h.launched, [Uri.parse('https://example.com/vip')]);
       await h.dispose();
+    });
+
+    group('custom action', () {
+      const data = {'type': 'offers', 'supplemental': 'id=42'};
+
+      InAppPopup customPopup({PopupLayout layout = PopupLayout.modal}) => InAppPopup(
+        id: 'c',
+        trackingId: 'trk-c',
+        createdAt: DateTime.utc(2026),
+        content: PopupContent(
+          layout: layout,
+          size: PopupSize.md,
+          title: 'T',
+          image:
+              layout == PopupLayout.imageOnly
+                  ? const PopupImage(
+                    url: 'gradient:#000000,#FFFFFF',
+                    tapAction: PopupAction(type: PopupActionType.custom, customData: data),
+                  )
+                  : null,
+          buttons: const [
+            PopupButton(
+              label: 'Go',
+              style: PopupButtonStyle.primary,
+              action: PopupAction(type: PopupActionType.custom, customData: data),
+            ),
+          ],
+        ),
+      );
+
+      testWidgets('a button closes, tracks the click, then hands over the pairs', (tester) async {
+        final received = <Map<String, String>>[];
+        late final Harness h;
+        h = await showing(
+          tester,
+          customPopup(),
+          onCustomAction: (pairs) {
+            expect(h.controller.current.value, isNull, reason: 'closed first');
+            received.add(pairs);
+          },
+        );
+        await h.tap(PopupKeys.button(0));
+        expect(received, [data]);
+        expect(h.source.sentEvents.map((e) => e.type), [
+          PopupEventType.impression,
+          PopupEventType.click,
+        ]);
+        expect(h.source.sentEvents.last.buttonIndex, 0);
+        await h.dispose();
+      });
+
+      testWidgets('an imageOnly tap hands over the pairs', (tester) async {
+        Map<String, String>? received;
+        final h = await showing(
+          tester,
+          customPopup(layout: PopupLayout.imageOnly),
+          onCustomAction: (d) => received = d,
+        );
+        h.controller.tapImage(h.controller.current.value!);
+        await tester.pump();
+        expect(received, data);
+        await h.dispose();
+      });
+
+      testWidgets('showTest uses the session callback and sends no events', (tester) async {
+        final received = <Map<String, String>>[];
+        final h = await showing(tester, inApp('a'), onCustomAction: received.add);
+        await h.tap(PopupKeys.button(1));
+        h.controller.showTest(customPopup().content);
+        await tester.pump();
+        final sent = h.source.sentEvents.length;
+        await h.tap(PopupKeys.button(0));
+        expect(received, [data]);
+        expect(h.source.sentEvents, hasLength(sent));
+        await h.dispose();
+      });
+
+      testWidgets('with no callback the button only closes', (tester) async {
+        final h = await showing(tester, customPopup());
+        await h.tap(PopupKeys.button(0));
+        expect(h.shownId, isNull);
+        expect(h.launched, isEmpty);
+        await h.dispose();
+      });
+
+      testWidgets('a deep link does not reach onCustomAction', (tester) async {
+        var called = 0;
+        final h = await showing(tester, inApp('d'), onCustomAction: (_) => called++);
+        await h.tap(PopupKeys.button(0));
+        expect(called, 0);
+        await h.dispose();
+      });
     });
 
     testWidgets('auto-dismiss reports a dismiss after autoDismissSec', (tester) async {
