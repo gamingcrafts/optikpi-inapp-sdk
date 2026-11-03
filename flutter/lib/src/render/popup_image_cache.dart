@@ -29,7 +29,11 @@ class PopupImageCache {
       _bytes[url] = cached; // most recently used last
       return Future.value(cached);
     }
-    return _loading[url] ??= _fetch(url).whenComplete(() => _loading.remove(url));
+    // A block body, not `=> _loading.remove(url)`: that returns this same future, and
+    // whenComplete waits for a future its callback returns, so the load would never complete.
+    return _loading[url] ??= _fetch(url).whenComplete(() {
+      _loading.remove(url);
+    });
   }
 
   Future<Uint8List?> _fetch(String url) async {

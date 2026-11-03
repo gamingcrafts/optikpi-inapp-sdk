@@ -21,10 +21,10 @@ dependencies:
     git:
       url: https://github.com/gamingcrafts/optikpi-inapp-sdk.git
       path: flutter
-      ref: flutter-v0.3.0
+      ref: flutter-v0.3.1
 ```
 
-If your build can't reach GitHub, unzip `optikpi_inapp-0.3.0.zip` into your repo instead (for
+If your build can't reach GitHub, unzip `optikpi_inapp-0.3.1.zip` into your repo instead (for
 example under `packages/optikpi_inapp/`) and use `path: packages/optikpi_inapp`.
 
 **2. Run `flutter pub get`.**
