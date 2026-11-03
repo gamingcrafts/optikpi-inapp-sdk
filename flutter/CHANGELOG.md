@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.3.1
+
+Fix: a pop-up with an image URL never showed, and nothing showed after it until the app restarted.
+- The image cache's load never completed: its cleanup callback returned the load's own future, which `whenComplete` waits for. The pop-up waited for its image forever, and while it waited no other pop-up could be picked. Pop-ups with no image or a `gradient:` image were not affected. Every release up to 0.3.0 has this bug.
+- An image that fails or doesn't arrive within the cache's 8 s timeout leaves the image area empty; the pop-up still shows. As a backstop for a custom cache, the controller also stops waiting after `OptikpiInAppController.imageWait` (10 s), so no image load can hold the queue again.
+
 ## 0.3.0
 
 A pop-up button or image can carry key/value pairs for the app's own click handler, the same pairs a push notification carries.

@@ -2,6 +2,8 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:http/http.dart' as http;
+import 'package:http/testing.dart';
 import 'package:optikpi_inapp/optikpi_inapp.dart';
 import 'package:optikpi_inapp/src/render/popup_image_cache.dart';
 import 'package:optikpi_inapp/src/route_observer.dart';
@@ -713,5 +715,63 @@ void main() {
     key.currentState!.pop();
     await tester.pumpAndSettle();
     expect(routes, ['/', '/games', '/games', '/']);
+  });
+  group('images', () {
+    // Pumps time without awaiting lastShow: a pick stuck on its image would hang that await.
+    Future<void> pumpFor(WidgetTester tester, Duration total) async {
+      const step = Duration(milliseconds: 100);
+      for (var t = Duration.zero; t < total; t += step) {
+        await tester.pump(step);
+      }
+    }
+
+    testWidgets('a pop-up with an image URL shows, and the next one still shows after it', (
+      tester,
+    ) async {
+      final images = PopupImageCache(
+        client: MockClient((request) async {
+          await Future<void>.delayed(const Duration(milliseconds: 300));
+          return http.Response.bytes(List<int>.filled(16, 7), 200);
+        }),
+      );
+      final h = Harness(
+        tester,
+        images: images,
+        source: FakeSource(
+          result: PopupFetchResult(
+            popups: [inAppWithImage('a', createdAt: DateTime.utc(2026, 10, 2)), inApp('b')],
+          ),
+        ),
+      );
+      await h.pumpApp();
+      h.controller.didChangeRoute('/home');
+      unawaited(h.controller.init(context: ctx, source: h.source));
+      await pumpFor(tester, const Duration(seconds: 2));
+      expect(h.shownId, 'a', reason: 'shown well before the image wait runs out');
+      h.controller.close(h.controller.current.value!, dismissed: true);
+      h.controller.didChangeRoute('/games');
+      await pumpFor(tester, const Duration(seconds: 1));
+      expect(h.shownId, 'b');
+      await h.dispose();
+    });
+
+    testWidgets('an image load that never ends holds the pop-up back only for imageWait', (
+      tester,
+    ) async {
+      final images = GatedImages(); // never released
+      final h = Harness(
+        tester,
+        images: images,
+        source: FakeSource(result: PopupFetchResult(popups: [inAppWithImage('a')])),
+      );
+      await h.pumpApp();
+      h.controller.didChangeRoute('/home');
+      unawaited(h.controller.init(context: ctx, source: h.source));
+      await pumpFor(tester, OptikpiInAppController.imageWait - const Duration(seconds: 1));
+      expect(h.shownId, isNull);
+      await pumpFor(tester, const Duration(seconds: 2));
+      expect(h.shownId, 'a');
+      await h.dispose();
+    });
   });
 }

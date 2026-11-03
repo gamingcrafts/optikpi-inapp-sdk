@@ -1,6 +1,6 @@
 # In-app pop-up pull API (v1): the contract
 
-One contract for every OptiKPI in-app SDK in this repo. The Flutter SDK (`optikpi_inapp` 0.3.0)
+One contract for every OptiKPI in-app SDK in this repo. The Flutter SDK (`optikpi_inapp` 0.3.1)
 calls it. `PopupSource.mock()` serves the bundled templates with no server, for demos and tests.
 
 Design rules come from the in-app pop-ups spec ("Delivery: pull"). The server stores each pop-up a
@@ -17,7 +17,7 @@ SDK must read the same way.
 | Base URL | per environment, `https://{dev\|qa\|app}.optikpi.com/apigw`, passed to the SDK's init (Flutter: `OptikpiInApp.init(baseUrl: …)`) |
 | `Authorization` | `Bearer {apiKey}`, the workspace's in-app integration key (required). The key carries the workspace, so no workspace header is sent. |
 | `x-player-token` | The player token, a JWT signed by the operator's server (see below). |
-| `x-sdk-version` | `{package}-{platform}/{version}`, e.g. `optikpi_inapp-flutter/0.3.0` (sent always, for support and metrics) |
+| `x-sdk-version` | `{package}-{platform}/{version}`, e.g. `optikpi_inapp-flutter/0.3.1` (sent always, for support and metrics) |
 
 Both calls send the same headers. The server resolves the workspace from the key and the player from
 the token.

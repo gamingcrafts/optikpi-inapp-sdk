@@ -107,6 +107,9 @@ class OptikpiInAppController with WidgetsBindingObserver {
   /// often follows it go in one request.
   final Duration flushDelay;
 
+  /// The longest a pop-up waits for its image before it shows without it.
+  static const Duration imageWait = Duration(seconds: 10);
+
   /// What the host draws. Null when nothing is on screen.
   final ValueNotifier<ActivePopup?> current = ValueNotifier(null);
 
@@ -404,7 +407,19 @@ class OptikpiInAppController with WidgetsBindingObserver {
         now: _clock(),
       );
       final image = next?.content.image;
-      if (image != null && !image.isGradient) await images.load(image.url);
+      if (image != null && !image.isGradient) {
+        // Bounded here too: while this waits no other pop-up can show, so a load that never
+        // ends must not hold the queue. The pop-up then shows and its view loads the image.
+        await images
+            .load(image.url)
+            .timeout(
+              imageWait,
+              onTimeout: () {
+                inAppLog('image still loading after ${imageWait.inSeconds} s: ${image.url}');
+                return null;
+              },
+            );
+      }
     } catch (error) {
       // Silent by contract (storage failed); the next show moment tries again.
       inAppLog('pick failed: $error');
