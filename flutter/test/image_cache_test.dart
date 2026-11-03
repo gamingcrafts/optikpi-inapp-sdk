@@ -10,6 +10,9 @@ import 'package:optikpi_inapp/src/render/popup_image_cache.dart';
 
 const url = 'https://img.test/a.avif';
 
+// A regression makes a load never complete: fail in seconds, not at the 30 s default.
+const fast = Timeout(Duration(seconds: 3));
+
 void main() {
   late int requests;
   late Completer<void>? gate;
@@ -34,7 +37,7 @@ void main() {
     expect(images.peek(url), [1, 2, 3]);
     expect(await images.load(url), [1, 2, 3]);
     expect(requests, 1, reason: 'the second load is served from memory');
-  });
+  }, timeout: fast);
 
   test('loads of one URL in flight share one request, and all complete', () async {
     gate = Completer<void>();
@@ -47,7 +50,7 @@ void main() {
       [1, 2, 3],
     ]);
     expect(requests, 1);
-  });
+  }, timeout: fast);
 
   test('a failed load completes with null, and the next load asks again', () async {
     for (final images in [cache(status: 404), cache(error: Exception('offline'))]) {
@@ -56,13 +59,13 @@ void main() {
       expect(await images.load(url), isNull);
       expect(requests, 2);
     }
-  });
+  }, timeout: fast);
 
   test('a URL that is not http(s) is not requested', () async {
     final images = cache();
     expect(await images.load('data:image/png;base64,AAAA'), isNull);
     expect(requests, 0);
-  });
+  }, timeout: fast);
 
   testWidgets('a load with no answer completes with null after the timeout', (tester) async {
     gate = Completer<void>();

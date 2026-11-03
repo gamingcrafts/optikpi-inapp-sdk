@@ -140,7 +140,7 @@ Other members:
 - **Route names with go_router.** The observer reads each page's name. go_router names a page after the route's `name:`, or its `path:` when it has none. So for routes with a `name:`, or paths with parameters like `/game/:id`, list the name or the pattern in `blockedRoutes`, or call `didChangeRoute` yourself with the real location.
 - **Moving from 0.1.0.** `init` no longer takes `workspaceId`, `playerId` or `deviceKey`, and `playerToken` and `baseUrl` are required.
 - **Other message types.** Only pop-ups exist today. A server entry with another `kind` is skipped, so an app on this version keeps working when new kinds arrive.
-- **Images.** The package loads the image before it shows the pop-up, then keeps the bytes in a small in-memory cache. `gradient:#a,#b` placeholder URLs draw as gradients.
+- **Images.** The package loads the image before it shows the pop-up, then keeps the bytes in a small in-memory cache. If the image fails or doesn't arrive in time, the pop-up shows with an empty image area. Use JPEG, PNG or WebP: AVIF and other formats depend on the device's decoders. `gradient:#a,#b` placeholder URLs draw as gradients.
 - **Storage.** In `shared_preferences`, under keys starting `optikpi_inapp.`: the ids already shown, the event queue, and the events already queued (for dedupe).
 
 ## Development

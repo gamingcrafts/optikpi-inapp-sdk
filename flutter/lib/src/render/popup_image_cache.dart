@@ -7,7 +7,8 @@ import 'package:http/http.dart' as http;
 import '../log.dart';
 
 /// A small in-memory cache of image bytes. The controller loads a pop-up's image before it shows
-/// the pop-up, so it never appears with an empty image area. Each pop-up is shown once per device,
+/// the pop-up, so a reachable image is drawn with it; one that fails or times out leaves the image
+/// area empty and the pop-up still shows. Each pop-up is shown once per device,
 /// so a disk cache would rarely be hit again; that is why this is not `cached_network_image`
 /// (which also brings sqflite and path_provider native plugins).
 class PopupImageCache {
