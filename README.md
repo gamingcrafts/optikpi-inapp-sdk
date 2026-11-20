@@ -13,7 +13,7 @@ same everywhere.
 |---|---|---|---|
 | Flutter (Android, iOS and other Flutter targets) | [`flutter/`](flutter/) | Available | `optikpi_inapp` |
 | React Native | `react-native/` | Planned | |
-| Web JS | `js/` | Planned | |
+| Web JS | [`js/`](js/) | Available | `optikpi_inapp` (not published yet) |
 
 ## What's in the repo
 
@@ -23,6 +23,7 @@ same everywhere.
 | [`contract/popup-content.schema.json`](contract/popup-content.schema.json) | JSON Schema of `PopupContent`, the content of one pop-up. |
 | [`contract/fixtures/`](contract/fixtures/) | Shared test data: one sample per layout (`layouts/`), and the malformed content and responses every SDK must read the same way (`content-cases.json`, `fetch-response-cases.json`). Each SDK's tests run them. |
 | [`flutter/`](flutter/) | The Flutter package. |
+| [`js/`](js/) | The web (JavaScript and React overlay) package. |
 
 ## Quick start
 
@@ -60,9 +61,25 @@ await OptikpiInApp.logout();                          // on logout
 
 The five integration steps, all options and the behaviour are in [`flutter/README.md`](flutter/README.md).
 
-### React Native, Web JS
+### Web JS
 
-Planned. They will follow `API.md` and run `contract/fixtures` in their tests.
+Not on npm yet. Depend on the `js` folder, then import `optikpi_inapp`:
+
+```json
+{
+  "dependencies": {
+    "optikpi_inapp": "file:../optikpi-inapp-sdk/js"
+  }
+}
+```
+
+The path is relative to the app's `package.json`. Mount and `init` steps are in [`js/README.md`](js/README.md).
+The web SDK draws modal, bottom sheet, banner, toast and image-only. A `fullscreen` popup is rejected
+and is not shown.
+
+### React Native
+
+Planned. It will follow `API.md` and run `contract/fixtures` in its tests.
 
 ## Releases
 
@@ -70,9 +87,9 @@ Each SDK is versioned and tagged on its own, as `{platform}-v{version}`: `flutte
 `react-native-v…` and `js-v…`. Apps pin the tag (`ref:` above). Every SDK has its own `CHANGELOG.md`
 in its folder.
 
-A release means: bump the version in the SDK's manifest (and `flutter/lib/src/version.dart` for
-Flutter), add the `CHANGELOG.md` entry, merge, then tag the merge commit. Nothing is published to
-pub.dev or npm yet. For apps that can't fetch from GitHub, `flutter/tool/make_zip.sh` builds a zip
+A release means: bump the version in the SDK's manifest (`flutter/pubspec.yaml`, or
+`js/package.json` and `js/version.ts` together), add the `CHANGELOG.md` entry, merge, then tag
+the merge commit. Nothing is published to pub.dev or npm yet. For apps that can't fetch from GitHub, `flutter/tool/make_zip.sh` builds a zip
 of the package.
 
 A change to `API.md` or `contract/` affects every SDK. Make it backward compatible (new optional

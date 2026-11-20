@@ -1,0 +1,50 @@
+{
+  "name": "optikpi_inapp",
+  "version": "0.1.0",
+  "private": true,
+  "description": "OptiKPI in-app pop-ups for websites. Fetches a player's waiting pop-ups, draws them over the page and reports impression, click and dismiss.",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./overlay": {
+      "types": "./dist/overlay.d.ts",
+      "default": "./dist/overlay.js"
+    },
+    "./overlay.css": "./dist/overlay.css"
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "CHANGELOG.md"
+  ],
+  "sideEffects": [
+    "./dist/overlay.js",
+    "*.css"
+  ],
+  "peerDependencies": {
+    "react": ">=18"
+  },
+  "peerDependenciesMeta": {
+    "react": {
+      "optional": true
+    }
+  },
+  "devDependencies": {
+    "@types/react": "^18.3.18",
+    "react": "^18.3.1",
+    "typescript": "^5.7.3"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json && cp overlay.css dist/overlay.css"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/gamingcrafts/optikpi-inapp-sdk.git",
+    "directory": "js"
+  }
+}

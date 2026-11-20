@@ -1,0 +1,199 @@
+/* Device surfaces for in-app pop-ups.
+   Laptop / desktop (>= 768px): centered web dialog.
+   Phone (< 768px): a card that fits the screen, with stacked tap targets. */
+
+.optikpi-inapp {
+  font-family: "Open Sans", "Josefin Sans", system-ui, sans-serif;
+}
+
+.optikpi-inapp button {
+  font-family: inherit;
+  line-height: 1.2;
+}
+
+.optikpi-stage {
+  position: fixed;
+  inset: 0;
+  z-index: 10050;
+}
+
+.optikpi-card {
+  background: var(--popup-bg);
+  color: var(--popup-text);
+  border-radius: var(--popup-radius);
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.28);
+  overflow: auto;
+  max-height: min(90vh, 900px);
+}
+
+.optikpi-modal {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+}
+
+.optikpi-hero {
+  width: 100%;
+  overflow: hidden;
+}
+
+.optikpi-body {
+  padding: 20px;
+}
+
+.optikpi-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 16px;
+}
+
+.optikpi-actions button {
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+@media (min-width: 768px) {
+  .optikpi-modal {
+    width: 560px;
+  }
+
+  .optikpi-modal[data-size="sm"] {
+    width: 400px;
+  }
+
+  .optikpi-modal[data-size="lg"] {
+    width: 720px;
+  }
+
+  .optikpi-modal[data-size="iab_300x250"] {
+    width: 300px;
+    height: 250px;
+  }
+
+  .optikpi-modal .optikpi-hero {
+    height: 220px;
+  }
+
+  .optikpi-modal[data-size="sm"] .optikpi-hero {
+    height: 140px;
+  }
+
+  .optikpi-modal .optikpi-body {
+    padding: 28px 32px 24px;
+  }
+
+  .optikpi-modal .optikpi-title {
+    font-size: 24px;
+    line-height: 1.3;
+  }
+
+  .optikpi-modal .optikpi-copy {
+    font-size: 16px;
+  }
+
+  .optikpi-actions {
+    flex-direction: row;
+    justify-content: flex-end;
+  }
+
+  .optikpi-actions button {
+    width: auto;
+    min-width: 132px;
+    padding: 12px 20px;
+    font-size: 15px;
+  }
+
+  .optikpi-sheet-panel {
+    position: absolute;
+    left: 50%;
+    bottom: 40px;
+    width: min(560px, calc(100vw - 48px));
+    height: auto;
+    max-height: 72vh;
+    transform: translateX(-50%);
+    border-radius: var(--popup-radius);
+  }
+}
+
+@media (max-width: 767px) {
+  .optikpi-modal {
+    width: calc(100vw - 32px);
+    max-width: 420px;
+  }
+
+  .optikpi-modal[data-size="sm"] {
+    width: min(78vw, 340px);
+  }
+
+  .optikpi-modal[data-size="lg"] {
+    width: calc(100vw - 16px);
+    max-width: none;
+  }
+
+  .optikpi-modal[data-size="iab_300x250"] {
+    width: min(300px, calc(100vw - 32px));
+    aspect-ratio: 300 / 250;
+    height: auto;
+  }
+
+  .optikpi-modal .optikpi-hero {
+    height: 144px;
+  }
+
+  .optikpi-modal[data-size="sm"] .optikpi-hero {
+    height: 96px;
+  }
+
+  .optikpi-modal .optikpi-body {
+    padding: 16px 16px calc(16px + env(safe-area-inset-bottom));
+  }
+
+  .optikpi-modal .optikpi-title {
+    font-size: 18px;
+  }
+
+  .optikpi-modal .optikpi-copy {
+    font-size: 14px;
+  }
+
+  .optikpi-actions {
+    flex-direction: column;
+  }
+
+  .optikpi-actions button {
+    width: 100%;
+    min-height: 44px;
+    padding: 10px 16px;
+    font-size: 15px;
+  }
+
+  .optikpi-sheet-panel {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    border-top-left-radius: var(--popup-radius);
+    border-top-right-radius: var(--popup-radius);
+  }
+
+  .optikpi-sheet-panel .optikpi-body {
+    padding-bottom: calc(20px + env(safe-area-inset-bottom, 0px));
+  }
+
+  .optikpi-sheet-panel[data-size="sm"] {
+    height: 34vh;
+  }
+
+  .optikpi-sheet-panel[data-size="md"] {
+    height: 50vh;
+  }
+
+  .optikpi-sheet-panel[data-size="lg"] {
+    height: 72vh;
+  }
+}
