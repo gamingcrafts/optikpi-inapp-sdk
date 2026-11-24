@@ -1,0 +1,1 @@
+# OptiKPI In-App SDK — no required keep rules for integrators.

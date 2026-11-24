@@ -1,0 +1,26 @@
+{
+  "version": 1,
+  "layout": "imageOnly",
+  "size": "iab_300x250",
+  "image": {
+    "url": "gradient:#0B6E4F,#101828",
+    "alt": "Weekend poker tournament",
+    "tapAction": {
+      "type": "deeplink",
+      "value": "app://poker"
+    }
+  },
+  "buttons": [],
+  "close": {
+    "show": true,
+    "position": "topRight",
+    "tapOutsideToClose": true
+  },
+  "theme": {
+    "background": "#FFFFFF",
+    "text": "#101828",
+    "primary": "#7F56D9",
+    "overlayOpacity": 0.5,
+    "radius": 16
+  }
+}

@@ -1,0 +1,35 @@
+{
+  "version": 1,
+  "layout": "banner",
+  "size": "md",
+  "position": "top",
+  "image": {
+    "url": "gradient:#12B76A,#0BA5EC",
+    "alt": ""
+  },
+  "title": "Odds boost: Real Madrid to win",
+  "body": "2.10 → 2.60 for the next 30 minutes",
+  "buttons": [
+    {
+      "label": "Bet now",
+      "style": "primary",
+      "action": {
+        "type": "deeplink",
+        "value": "app://sports/event/88231"
+      }
+    }
+  ],
+  "close": {
+    "show": true,
+    "position": "topRight",
+    "tapOutsideToClose": true
+  },
+  "theme": {
+    "background": "#101828",
+    "text": "#FFFFFF",
+    "primary": "#12B76A",
+    "overlayOpacity": 0.7,
+    "radius": 16
+  },
+  "autoDismissSec": 10
+}

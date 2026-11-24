@@ -12,6 +12,7 @@ same everywhere.
 | Platform | Folder | Status | Package |
 |---|---|---|---|
 | Flutter (Android, iOS and other Flutter targets) | [`flutter/`](flutter/) | Available | `optikpi_inapp` |
+| Java Android | [`java-android/`](java-android/) | Available | `optikpi_inapp` |
 | React Native | `react-native/` | Planned | |
 | Web JS | `js/` | Planned | |
 
@@ -23,6 +24,7 @@ same everywhere.
 | [`contract/popup-content.schema.json`](contract/popup-content.schema.json) | JSON Schema of `PopupContent`, the content of one pop-up. |
 | [`contract/fixtures/`](contract/fixtures/) | Shared test data: one sample per layout (`layouts/`), and the malformed content and responses every SDK must read the same way (`content-cases.json`, `fetch-response-cases.json`). Each SDK's tests run them. |
 | [`flutter/`](flutter/) | The Flutter package. |
+| [`java-android/`](java-android/) | The Java Android library (`com.optikpi.inapp`). |
 
 ## Quick start
 
@@ -60,20 +62,40 @@ await OptikpiInApp.logout();                          // on logout
 
 The five integration steps, all options and the behaviour are in [`flutter/README.md`](flutter/README.md).
 
+### Java Android
+
+Include the Gradle module under `java-android/`, pinned to a release tag, then call `init` at login:
+
+```java
+import com.optikpi.inapp.OptikpiInApp;
+
+OptikpiInApp.init(
+    this,
+    "...",
+    loginResponse.optikpiPlayerToken,
+    "https://app.optikpi.com/apigw"
+);
+
+OptikpiInApp.logout(this);
+```
+
+Vendor the repo at ref `java-android-v0.1.0` (same idea as `flutter-v…` above). The five integration
+steps, all options and the behaviour are in [`java-android/README.md`](java-android/README.md).
+
 ### React Native, Web JS
 
 Planned. They will follow `API.md` and run `contract/fixtures` in their tests.
 
 ## Releases
 
-Each SDK is versioned and tagged on its own, as `{platform}-v{version}`: `flutter-v0.1.0`, later
-`react-native-v…` and `js-v…`. Apps pin the tag (`ref:` above). Every SDK has its own `CHANGELOG.md`
-in its folder.
+Each SDK is versioned and tagged on its own, as `{platform}-v{version}`: `flutter-v0.1.0`,
+`java-android-v0.1.0`, later `react-native-v…` and `js-v…`. Apps pin the tag (`ref:` above). Every
+SDK has its own `CHANGELOG.md` in its folder.
 
-A release means: bump the version in the SDK's manifest (and `flutter/lib/src/version.dart` for
-Flutter), add the `CHANGELOG.md` entry, merge, then tag the merge commit. Nothing is published to
-pub.dev or npm yet. For apps that can't fetch from GitHub, `flutter/tool/make_zip.sh` builds a zip
-of the package.
+A release means: bump the version in the SDK's manifest (`flutter/lib/src/version.dart` for Flutter,
+`java-android/library/.../Version.java` for Java Android), add the `CHANGELOG.md` entry, merge, then
+tag the merge commit. Nothing is published to pub.dev, Maven Central or npm yet. For apps that can't
+fetch from GitHub, `flutter/tool/make_zip.sh` builds a zip of the Flutter package.
 
 A change to `API.md` or `contract/` affects every SDK. Make it backward compatible (new optional
 fields, new `kind`s), and update the fixtures with it.

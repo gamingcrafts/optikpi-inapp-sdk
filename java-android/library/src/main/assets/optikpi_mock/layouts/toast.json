@@ -1,0 +1,35 @@
+{
+  "version": 1,
+  "layout": "toast",
+  "size": "md",
+  "position": "topRight",
+  "image": {
+    "url": "gradient:#F79009,#F04438",
+    "alt": ""
+  },
+  "title": "20 free spins expire in 2 hours",
+  "body": "Use them on Book of Dead before midnight.",
+  "buttons": [
+    {
+      "label": "Play now",
+      "style": "primary",
+      "action": {
+        "type": "deeplink",
+        "value": "app://game/book-of-dead"
+      }
+    }
+  ],
+  "close": {
+    "show": true,
+    "position": "topRight",
+    "tapOutsideToClose": true
+  },
+  "theme": {
+    "background": "#FFFFFF",
+    "text": "#101828",
+    "primary": "#7F56D9",
+    "overlayOpacity": 0.5,
+    "radius": 16
+  },
+  "autoDismissSec": 8
+}

@@ -1,0 +1,26 @@
+name: java-android
+
+on:
+  push:
+    branches: [main]
+    paths: ['java-android/**', 'contract/**', '.github/workflows/java-android.yml']
+  pull_request:
+    paths: ['java-android/**', 'contract/**', '.github/workflows/java-android.yml']
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: java-android
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: gradle/actions/setup-gradle@v4
+      - run: gradle :library:test
